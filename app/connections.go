@@ -270,7 +270,7 @@ func (c *Connections) TerminatePostgresConnection(activePoolID int64) (bool, err
 	return true, nil
 }
 
-func (c *Connections) GetAllTables(activePoolID int64) ([]*string, error) {
+func (c *Connections) GetAllPostgresTables(activePoolID int64) ([]*string, error) {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
 		return nil, errors.New("pool doesn't exist")

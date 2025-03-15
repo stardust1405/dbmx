@@ -8,7 +8,7 @@ export function EstablishPostgresConnection(arg1:number,arg2:string):Promise<any
 
 export function ExecuteQuery(arg1:number,arg2:string,arg3:Array<any>):Promise<model.GenericResponse>;
 
-export function GetAllTables(arg1:number):Promise<Array<any>>;
+export function GetAllPostgresTables(arg1:number):Promise<Array<any>>;
 
 export function GetPostgresConnections():Promise<Array<model.Postgres>>;
 

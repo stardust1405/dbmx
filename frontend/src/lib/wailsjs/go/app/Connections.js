@@ -14,8 +14,8 @@ export function ExecuteQuery(arg1, arg2, arg3) {
   return window['go']['app']['Connections']['ExecuteQuery'](arg1, arg2, arg3);
 }
 
-export function GetAllTables(arg1) {
-  return window['go']['app']['Connections']['GetAllTables'](arg1);
+export function GetAllPostgresTables(arg1) {
+  return window['go']['app']['Connections']['GetAllPostgresTables'](arg1);
 }
 
 export function GetPostgresConnections() {

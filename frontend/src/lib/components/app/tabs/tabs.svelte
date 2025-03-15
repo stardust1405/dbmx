@@ -12,6 +12,8 @@
 	// Import our custom components
 	import SqlEditor from '$lib/components/app/main_screen/sql_editor.svelte';
 	import QueryOutput from '$lib/components/app/main_screen/query_output.svelte';
+	import { model } from '$lib/wailsjs/go/models';
+	import { AddTab, DeleteTab, GetAllTabs, SetActiveTab } from '$lib/wailsjs/go/app/Tabs';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
@@ -32,28 +34,115 @@
 		}, 0);
 	}
 
-	// Store the previous tab id
-	let previousTabId = $state('');
-	let editorContent = $state('select * from users\nselect * from users');
+	// Handle Tabs
+
+	// Active tab properties
+	let tabID = $state(0);
+	let tabName = $state('');
+	let editor = $state('select * from users\nselect * from users');
+	let output = $state('');
+	let activeDBID = $state(0);
+	let activeDB = $state('');
+
+	// Declare tabsMap as a reactive state variable
+	let tabsMap = $state<Map<number, model.Tab>>(new Map<number, model.Tab>());
+
+	// Tab related operations
+	function getAllTabs() {
+		GetAllTabs().then((tabs) => {
+			for (const tab of tabs) {
+				tabsMap.set(tab.ID, tab);
+				tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
+
+				// Set active tab properties
+				if (tab.IsActive) {
+					tabID = tab.ID;
+					tabName = tab.Name;
+					editor = tab.Editor;
+					output = tab.Output;
+					activeDBID = tab.ActiveDBID || 0;
+					activeDB = tab.ActiveDB || '';
+				}
+			}
+		});
+	}
+
+	function addTab() {
+		// Send default values for now in activeDBID and activeDB
+		AddTab(0, '').then((tab) => {
+			tabsMap.set(tab.ID, tab);
+			tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
+
+			tabID = tab.ID;
+			tabName = tab.Name;
+			editor = tab.Editor;
+			output = tab.Output;
+			activeDBID = tab.ActiveDBID || 0;
+			activeDB = tab.ActiveDB || '';
+		});
+	}
+
+	function deleteTab(id: number) {
+		tabsMap.delete(id);
+		DeleteTab(id).then((tab) => {
+			tabsMap.set(tab.ID, tab);
+			tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
+
+			tabID = tab.ID;
+			tabName = tab.Name;
+			editor = tab.Editor;
+			output = tab.Output;
+			activeDBID = tab.ActiveDBID || 0;
+			activeDB = tab.ActiveDB || '';
+		});
+	}
+
+	function setActiveTab(id: number) {
+		SetActiveTab(id).then((tab) => {
+			tabsMap.set(tab.ID, tab);
+			tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
+
+			tabID = tab.ID;
+			tabName = tab.Name;
+			editor = tab.Editor;
+			output = tab.Output;
+			activeDBID = tab.ActiveDBID || 0;
+			activeDB = tab.ActiveDB || '';
+		});
+	}
+
+	onMount(() => {
+		getAllTabs();
+	});
 </script>
 
-<Tabs.Root value={'tab 1'}>
+<Tabs.Root value={tabID.toString()}>
 	<!-- Tabs visible in the header -->
 	<header class="flex h-14 shrink-0 items-center gap-2 overflow-auto border-b px-4">
 		<Sidebar.Trigger class="-ml-1" />
 		<Separator orientation="vertical" />
 		<Tabs.List>
-			<!-- {#each Object.entries(tabs) as [id, tab]} -->
-			<div class="mr-2 flex rounded-sm bg-slate-800">
-				<Tabs.Trigger value={'tab 1'} class="flex items-center">
-					{'tab 1'}
-				</Tabs.Trigger>
-				<button class="rounded-r-sm bg-slate-900 px-2 py-1 text-slate-300 hover:text-red-700">
-					<X size={16} />
-				</button>
-			</div>
-			<!-- {/each} -->
-			<button class="ml-2 flex items-center gap-1 text-blue-500 hover:text-blue-700">
+			{#each Array.from(tabsMap.entries()) as [key, tab]}
+				<div class="mr-2 flex rounded-sm bg-slate-800">
+					<Tabs.Trigger
+						value={tab.ID.toString()}
+						class="flex items-center"
+						onclick={() => setActiveTab(tab.ID)}
+					>
+						{tab.Name}
+					</Tabs.Trigger>
+					<button
+						class="rounded-r-sm bg-slate-900 px-2 py-1 text-slate-300 hover:text-red-700"
+						onclick={() => deleteTab(tab.ID)}
+					>
+						<X size={16} />
+					</button>
+				</div>
+			{/each}
+			<button
+				class="ml-2 flex items-center gap-1 text-blue-500 hover:text-blue-700"
+				onclick={addTab}
+			>
 				<Plus size={16} /> Add Tab
 			</button>
 		</Tabs.List>
@@ -61,10 +150,10 @@
 
 	<!-- Main Content on screen -->
 	<div class="flex h-screen flex-1 flex-col gap-4 p-4">
-		<Tabs.Content value={'tab 1'} class="flex-1 overflow-hidden">
+		<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
 			<div class="flex h-full flex-col">
 				<div class="mb-2 flex items-center justify-between">
-					<h2 class="text-lg font-semibold">{'tab 1'}</h2>
+					<h2 class="text-lg font-semibold">{tabName}</h2>
 					<div class="flex gap-2">
 						<Button variant="outline" size="sm" onclick={resetSplitView}>
 							<ArrowsMaximize size={16} class="mr-2" /> Reset Split
@@ -80,7 +169,7 @@
 						minSize={10}
 						class="rsz-pane overflow-hidden rounded-md border"
 					>
-						<SqlEditor id={'tab 1'} value={editorContent} />
+						<SqlEditor id={tabID.toString()} value={editor} />
 					</Resizable.ResizablePane>
 
 					<Resizable.ResizableHandle />
@@ -91,7 +180,8 @@
 						minSize={10}
 						class="rsz-pane overflow-auto"
 					>
-						<!-- <QueryOutput outputs={tab.outputData} /> -->
+						<h1>{output}</h1>
+						<!-- <QueryOutput outputs={outputContent} /> -->
 					</Resizable.ResizablePane>
 				</Resizable.ResizablePaneGroup>
 			</div>

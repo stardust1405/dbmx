@@ -46,6 +46,30 @@ export namespace model {
 	        this.Colour = source["Colour"];
 	    }
 	}
+	export class Tab {
+	    ID: number;
+	    Name: string;
+	    Editor: string;
+	    Output: string;
+	    IsActive: boolean;
+	    ActiveDBID?: number;
+	    ActiveDB?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Tab(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
+	        this.Name = source["Name"];
+	        this.Editor = source["Editor"];
+	        this.Output = source["Output"];
+	        this.IsActive = source["IsActive"];
+	        this.ActiveDBID = source["ActiveDBID"];
+	        this.ActiveDB = source["ActiveDB"];
+	    }
+	}
 
 }
 
