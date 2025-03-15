@@ -3,6 +3,7 @@ package app
 import (
 	"database/sql"
 	"dbmx/model"
+	"fmt"
 )
 
 type Tabs struct {
@@ -55,6 +56,7 @@ func (t *Tabs) AddTab(activeDBID int64, activeDB string) (*model.Tab, error) {
 }
 
 func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
+	fmt.Println("Setting active tab to", id)
 	// Write an update query to set is_active to false for all other tabs
 	updateQuery := `UPDATE tabs SET is_active = false WHERE id != ?`
 	_, err := t.DB.Exec(updateQuery, id)
@@ -67,7 +69,7 @@ func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
 	row := t.DB.QueryRow(updateQuery, id)
 
 	var tab model.Tab
-	err = row.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive)
+	err = row.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB)
 	if err != nil {
 		return nil, err
 	}
@@ -113,14 +115,29 @@ func (t *Tabs) DeleteTab(id int64) (*model.Tab, error) {
 	// Tab to be returned
 	var tab model.Tab
 
+	var isLastTab bool
+
 	// If the tab is active, set the first tab as active where id != id and return that tab
 	if isActive {
-		query = `UPDATE tabs SET is_active = true WHERE id != ? RETURNING *`
-		row := t.DB.QueryRow(query, id)
-
-		err = row.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB)
+		// Check for the count of tabs to find if it's the last tab
+		query = `SELECT COUNT(*) FROM tabs`
+		var count int64
+		err := t.DB.QueryRow(query).Scan(&count)
 		if err != nil {
 			return nil, err
+		}
+
+		// If it's not the last tab, set the first tab as active
+		if count > 1 {
+			query = `UPDATE tabs SET is_active = true WHERE id = (SELECT id FROM tabs WHERE id != ? LIMIT 1) RETURNING *`
+			row := t.DB.QueryRow(query, id)
+
+			err = row.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			isLastTab = true
 		}
 	}
 
@@ -131,9 +148,19 @@ func (t *Tabs) DeleteTab(id int64) (*model.Tab, error) {
 		return nil, err
 	}
 
-	if isActive {
+	if isActive && !isLastTab {
 		return &tab, nil
 	}
 
 	return nil, nil
+}
+
+func (t *Tabs) UpdateTabEditorContent(id int64, editor string) error {
+	query := `UPDATE tabs SET editor = ? WHERE id = ?`
+	_, err := t.DB.Exec(query, editor, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

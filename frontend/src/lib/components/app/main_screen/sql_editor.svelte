@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Monaco from 'svelte-monaco';
+	// import Monaco from 'svelte-monaco';
 	import { createEventDispatcher } from 'svelte';
 	import { onMount } from 'svelte';
 	import type monaco from 'monaco-editor';
@@ -23,14 +23,14 @@
 
 			// If the editor is initialized, update its content
 			if (isInitialized && editor) {
-				const model = editor.getModel();
-				if (model) {
-					const currentValue = model.getValue();
-					if (currentValue !== value) {
-						console.log(`[${id}] Updating editor model value`);
-						model.setValue(value);
-					}
-				}
+				// const model = editor.getModel();
+				// if (model) {
+				// 	const currentValue = model.getValue();
+				// 	if (currentValue !== value) {
+				// 		console.log(`[${id}] Updating editor model value`);
+				// 		model.setValue(value);
+				// 	}
+				// }
 			}
 		}
 	});
@@ -200,7 +200,7 @@
 
 <!-- The Monaco editor itself manages focus and keyboard interactions -->
 <div class="h-full w-full" style="height: {height}; width: {width};" data-editor-id={id}>
-	<Monaco
+	<!-- <Monaco
 		theme="vs-dark"
 		value={localValue}
 		on:change={handleChange}
@@ -234,7 +234,7 @@
 			parameterHints: { enabled: true },
 			tabSize: 2
 		}}
-	/>
+	/> -->
 </div>
 
 <style>

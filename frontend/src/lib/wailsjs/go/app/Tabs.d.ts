@@ -9,3 +9,5 @@ export function DeleteTab(arg1:number):Promise<model.Tab>;
 export function GetAllTabs():Promise<Array<model.Tab>>;
 
 export function SetActiveTab(arg1:number):Promise<model.Tab>;
+
+export function UpdateTabEditorContent(arg1:number,arg2:string):Promise<void>;

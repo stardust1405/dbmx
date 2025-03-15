@@ -11,12 +11,31 @@
 
 	// Import our custom components
 	import SqlEditor from '$lib/components/app/main_screen/sql_editor.svelte';
+	import SqlEditor2 from '$lib/components/app/main_screen/sql_editor2.svelte';
 	import QueryOutput from '$lib/components/app/main_screen/query_output.svelte';
 	import { model } from '$lib/wailsjs/go/models';
 	import { AddTab, DeleteTab, GetAllTabs, SetActiveTab } from '$lib/wailsjs/go/app/Tabs';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
+	let keywords = $state([
+		'SELECT',
+		'FROM',
+		'WHERE',
+		'INNER',
+		'LEFT',
+		'RIGHT',
+		'JOIN',
+		'AND',
+		'OR',
+		'NOT',
+		'IN',
+		'LIKE',
+		'BETWEEN',
+		'ORDER BY',
+		'LIMIT',
+		'location_wise_inventory'
+	]);
 
 	function resetSplitView() {
 		// Force a reset of the pane sizes
@@ -39,10 +58,16 @@
 	// Active tab properties
 	let tabID = $state(0);
 	let tabName = $state('');
-	let editor = $state('select * from users\nselect * from users');
+	let editor = $state('');
 	let output = $state('');
 	let activeDBID = $state(0);
 	let activeDB = $state('');
+
+	// Print the content of editor in console
+	$effect(() => {
+		console.log('Editor content changed');
+		console.log(editor);
+	});
 
 	// Declare tabsMap as a reactive state variable
 	let tabsMap = $state<Map<number, model.Tab>>(new Map<number, model.Tab>());
@@ -84,17 +109,21 @@
 
 	function deleteTab(id: number) {
 		tabsMap.delete(id);
+		tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
 		DeleteTab(id).then((tab) => {
-			tabsMap.set(tab.ID, tab);
-			tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
+			if (tab) {
+				tabsMap.set(tab.ID, tab);
+				tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
 
-			tabID = tab.ID;
-			tabName = tab.Name;
-			editor = tab.Editor;
-			output = tab.Output;
-			activeDBID = tab.ActiveDBID || 0;
-			activeDB = tab.ActiveDB || '';
+				tabID = tab.ID;
+				tabName = tab.Name;
+				editor = tab.Editor;
+				output = tab.Output;
+				activeDBID = tab.ActiveDBID || 0;
+				activeDB = tab.ActiveDB || '';
+			}
 		});
+		console.log(tabsMap);
 	}
 
 	function setActiveTab(id: number) {
@@ -148,43 +177,46 @@
 		</Tabs.List>
 	</header>
 
-	<!-- Main Content on screen -->
-	<div class="flex h-screen flex-1 flex-col gap-4 p-4">
-		<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
-			<div class="flex h-full flex-col">
-				<div class="mb-2 flex items-center justify-between">
-					<h2 class="text-lg font-semibold">{tabName}</h2>
-					<div class="flex gap-2">
-						<Button variant="outline" size="sm" onclick={resetSplitView}>
-							<ArrowsMaximize size={16} class="mr-2" /> Reset Split
-						</Button>
-						<Button variant="default" size="sm">Execute Query</Button>
+	{#if tabsMap.size > 0}
+		<!-- Main Content on screen -->
+		<div class="flex h-screen flex-1 flex-col gap-4 p-4">
+			<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
+				<div class="flex h-full flex-col">
+					<div class="mb-2 flex items-center justify-between">
+						<h2 class="text-lg font-semibold">{tabName}</h2>
+						<div class="flex gap-2">
+							<Button variant="outline" size="sm" onclick={resetSplitView}>
+								<ArrowsMaximize size={16} class="mr-2" /> Reset Split
+							</Button>
+							<Button variant="default" size="sm">Execute Query</Button>
+						</div>
 					</div>
+
+					<Resizable.ResizablePaneGroup direction="vertical" class="h-full">
+						<!-- SQL Editor Pane -->
+						<Resizable.ResizablePane
+							defaultSize={editorHeight}
+							minSize={10}
+							class="rsz-pane overflow-hidden rounded-md border"
+						>
+							<!-- <SqlEditor id={tabID.toString()} value={editor} /> -->
+							<SqlEditor2 value={editor} {keywords} />
+						</Resizable.ResizablePane>
+
+						<Resizable.ResizableHandle />
+
+						<!-- Output Pane -->
+						<Resizable.ResizablePane
+							defaultSize={outputHeight}
+							minSize={10}
+							class="rsz-pane overflow-auto"
+						>
+							<h1>{output}</h1>
+							<!-- <QueryOutput outputs={outputContent} /> -->
+						</Resizable.ResizablePane>
+					</Resizable.ResizablePaneGroup>
 				</div>
-
-				<Resizable.ResizablePaneGroup direction="vertical" class="h-full">
-					<!-- SQL Editor Pane -->
-					<Resizable.ResizablePane
-						defaultSize={editorHeight}
-						minSize={10}
-						class="rsz-pane overflow-hidden rounded-md border"
-					>
-						<SqlEditor id={tabID.toString()} value={editor} />
-					</Resizable.ResizablePane>
-
-					<Resizable.ResizableHandle />
-
-					<!-- Output Pane -->
-					<Resizable.ResizablePane
-						defaultSize={outputHeight}
-						minSize={10}
-						class="rsz-pane overflow-auto"
-					>
-						<h1>{output}</h1>
-						<!-- <QueryOutput outputs={outputContent} /> -->
-					</Resizable.ResizablePane>
-				</Resizable.ResizablePaneGroup>
-			</div>
-		</Tabs.Content>
-	</div>
+			</Tabs.Content>
+		</div>
+	{/if}
 </Tabs.Root>
