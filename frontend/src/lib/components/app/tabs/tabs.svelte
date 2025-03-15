@@ -14,7 +14,13 @@
 	import SqlEditor2 from '$lib/components/app/main_screen/sql_editor2.svelte';
 	import QueryOutput from '$lib/components/app/main_screen/query_output.svelte';
 	import { model } from '$lib/wailsjs/go/models';
-	import { AddTab, DeleteTab, GetAllTabs, SetActiveTab } from '$lib/wailsjs/go/app/Tabs';
+	import {
+		AddTab,
+		DeleteTab,
+		GetAllTabs,
+		SetActiveTab,
+		UpdateTabEditorContent
+	} from '$lib/wailsjs/go/app/Tabs';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
@@ -58,15 +64,28 @@
 	// Active tab properties
 	let tabID = $state(0);
 	let tabName = $state('');
-	let editor = $state('');
+	let editor = $state('select * from');
 	let output = $state('');
 	let activeDBID = $state(0);
 	let activeDB = $state('');
 
-	// Print the content of editor in console
+	onMount(() => {
+		getAllTabs();
+	});
+
+	// Call UpdateTabEditorContent on editor change
+	let editorUpdateTimer: number | undefined;
 	$effect(() => {
-		console.log('Editor content changed');
-		console.log(editor);
+		// Explicitly reference editor to ensure reactivity
+		const _ = editor;
+
+		// Clear any existing timeout to debounce rapid changes
+		if (editorUpdateTimer) clearTimeout(editorUpdateTimer);
+
+		// Set a new timeout to update the content after typing stops
+		editorUpdateTimer = setTimeout(() => {
+			UpdateTabEditorContent(tabID, editor);
+		}, 500);
 	});
 
 	// Declare tabsMap as a reactive state variable
@@ -139,10 +158,6 @@
 			activeDB = tab.ActiveDB || '';
 		});
 	}
-
-	onMount(() => {
-		getAllTabs();
-	});
 </script>
 
 <Tabs.Root value={tabID.toString()}>
@@ -200,7 +215,7 @@
 							class="rsz-pane overflow-hidden rounded-md border"
 						>
 							<!-- <SqlEditor id={tabID.toString()} value={editor} /> -->
-							<SqlEditor2 value={editor} {keywords} />
+							<SqlEditor2 bind:value={editor} {keywords} />
 						</Resizable.ResizablePane>
 
 						<Resizable.ResizableHandle />

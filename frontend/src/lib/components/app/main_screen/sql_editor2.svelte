@@ -5,21 +5,34 @@
 	let editorContainer: HTMLElement;
 	let editor: import('monaco-editor').editor.IStandaloneCodeEditor;
 	let completionProviderDisposable: import('monaco-editor').IDisposable;
+	let isInitialized = false;
 
-	const { value = $bindable(), height = '100%', width = '100%', keywords = [] } = $props();
+	let { value = $bindable(), height = '100%', width = '100%', keywords = [] } = $props();
+
+	// This effect will run whenever the value changes from outside
+	$effect(() => {
+		const _ = value;
+
+		// Only update the editor if it exists and is initialized
+		if (editor && isInitialized) {
+			// Prevent infinite loops by checking if the editor value is different from the prop value
+			const currentValue = editor.getValue();
+			if (currentValue !== value) {
+				// Update the editor model with the new value
+				editor.setValue(value);
+			}
+		}
+	});
 
 	onMount(async () => {
-		console.log('Initializing editor');
 		const monaco = await loader.init();
 
 		monaco.languages.register({ id: 'sql' });
 
 		completionProviderDisposable = monaco.languages.registerCompletionItemProvider('sql', {
 			provideCompletionItems: (model, position) => {
-				console.log('Completion provider called');
 				const word = model.getWordAtPosition(position);
 				if (!word) {
-					console.log('No word found');
 					return { suggestions: [] };
 				}
 
@@ -29,8 +42,6 @@
 				const suggestions = sqlKeywords.filter((keyword) =>
 					keyword.toLowerCase().startsWith(prefix)
 				);
-
-				console.log('Suggestions:', suggestions);
 
 				return {
 					suggestions: suggestions.map((keyword) => ({
@@ -53,20 +64,29 @@
 			language: 'sql',
 			theme: 'vs-dark',
 			minimap: { enabled: false },
+			fontSize: 14,
 			automaticLayout: true
+		});
+
+		// Update value when editor content changes
+		editor.onDidChangeModelContent(() => {
+			value = editor.getValue();
 		});
 
 		// Manually trigger suggestions on key press
 		editor.onKeyDown((e) => {
 			if (e.keyCode === 32 || e.keyCode === 9) {
 				// Space or Tab
-				editor.trigger('editor.action.triggerSuggest', 'sql', null);
+				// Use the correct command for triggering suggestions
+				editor.trigger('keyboard', 'editor.action.triggerSuggest', null);
 			}
 		});
+
+		// Mark as initialized after editor is created
+		isInitialized = true;
 	});
 
 	onDestroy(() => {
-		console.log('Destroying editor');
 		editor?.dispose();
 		completionProviderDisposable?.dispose();
 	});
