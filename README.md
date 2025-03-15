@@ -2,7 +2,7 @@
 
 ## About
 
-This is the official Wails Svelte-TS template.
+DBMX is a modern and productivity focused database management tool. It is under active development and is NOT ready for production use.
 
 ## Live Development
 
