@@ -1,13 +1,6 @@
 <script lang="ts" module>
-	// import { onMount } from 'svelte';
-	// import type { model } from '$lib/wailsjs/go/models';
-
-	// let postgresConnections = $state<Array<model.Postgres>>();
-
-	// import { GetPostgresConnections } from '$lib/wailsjs/go/app/Connections';
-	// onMount(() => {
-	// 	GetPostgresConnections().then((connections) => (postgresConnections = connections));
-	// });
+	import { onMount } from 'svelte';
+	import type { model } from '$lib/wailsjs/go/models';
 
 	// This is sample data.
 	const data = {
@@ -32,34 +25,34 @@
 					name: 'Stage Inventory',
 					env: 'local',
 					colour: 'purple'
-				},
-				{
-					name: 'inventorydb',
-					env: 'local',
-					colour: 'purple'
-				},
-				{
-					name: 'reportingdb',
-					env: 'local',
-					colour: 'purple'
 				}
+				// {
+				// 	name: 'inventorydb',
+				// 	env: 'local',
+				// 	colour: 'purple'
+				// },
+				// {
+				// 	name: 'reportingdb',
+				// 	env: 'local',
+				// 	colour: 'purple'
+				// }
 			],
 			[
 				{
 					name: 'Prod Inventory',
 					env: 'prod',
 					colour: 'purple'
-				},
-				{
-					name: 'inventorydb',
-					env: 'local',
-					colour: 'purple'
-				},
-				{
-					name: 'reportingdb',
-					env: 'local',
-					colour: 'purple'
 				}
+				// {
+				// 	name: 'inventorydb',
+				// 	env: 'local',
+				// 	colour: 'purple'
+				// },
+				// {
+				// 	name: 'reportingdb',
+				// 	env: 'local',
+				// 	colour: 'purple'
+				// }
 			]
 			// ['lib', ['components', 'button.svelte', 'card.svelte'], 'utils.ts'],
 			// [
@@ -80,16 +73,29 @@
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import File from 'lucide-svelte/icons/file';
 	import Folder from 'lucide-svelte/icons/folder';
-	import type { ComponentProps } from 'svelte';
 	import Plus from 'lucide-svelte/icons/plus';
 	import SettingsDialog from '$lib/components/settings-dialog.svelte';
+	import { type ComponentProps } from 'svelte';
+	import { ActiveConnection } from './app-sidebar';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
+
+	let postgresConnections: Array<model.Postgres> = $state([]);
+
+	import { GetPostgresConnections } from '$lib/wailsjs/go/app/Connections';
+	onMount(() => {
+		GetPostgresConnections().then((connections) => (postgresConnections = connections));
+	});
+
+	$effect(() => {
+		console.log(postgresConnections);
+		console.log(postgresConnections);
+	});
 </script>
 
 <Sidebar.Root bind:ref {...restProps}>
 	<Sidebar.Content>
-		<Sidebar.Group>
+		<!-- <Sidebar.Group>
 			<Sidebar.GroupLabel>Favourites</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
@@ -104,13 +110,30 @@
 					{/each}
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>
-		</Sidebar.Group>
+		</Sidebar.Group> -->
 		<Sidebar.Group>
 			<Sidebar.GroupLabel>Connections</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
-					{#each data.tree as item, index (index)}
-						{@render Tree({ item })}
+					{#each postgresConnections as connection, index (index)}
+						<Sidebar.MenuItem>
+							<Collapsible.Root>
+								<Collapsible.Trigger>
+									<Sidebar.MenuButton>
+										<Folder />
+										{connection.Name}
+									</Sidebar.MenuButton>
+								</Collapsible.Trigger>
+								<Collapsible.Content>
+									<Sidebar.MenuSub>
+										<Folder />
+										{connection.ID}
+										{connection.Database}
+										{connection.Env}
+									</Sidebar.MenuSub>
+								</Collapsible.Content>
+							</Collapsible.Root>
+						</Sidebar.MenuItem>
 					{/each}
 				</Sidebar.Menu>
 			</Sidebar.GroupContent>
@@ -129,7 +152,7 @@
 	<Sidebar.Rail />
 </Sidebar.Root>
 
-<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any -->
+<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any
 {#snippet Tree({ item }: { item: string | any[] })}
 	{@const [name, ...items] = Array.isArray(item) ? item : [item]}
 	{#if !items.length}
@@ -165,4 +188,4 @@
 			</Collapsible.Root>
 		</Sidebar.MenuItem>
 	{/if}
-{/snippet}
+{/snippet} -->

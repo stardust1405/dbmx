@@ -1,6 +1,7 @@
 package model
 
-type Postgres struct {
+// PostgresConnection represents a connection to a PostgreSQL server
+type PostgresConnection struct {
 	ID       int64
 	Name     string
 	Host     string
@@ -10,6 +11,15 @@ type Postgres struct {
 	Database string
 	Env      string
 	Colour   *string
+	IsActive bool
+}
+
+type Database struct {
+	PostgresConnectionID int64
+	PoolID               int64
+	Name                 string
+	IsActive             bool
+	Tables               []string
 }
 
 type GenericResponse struct {

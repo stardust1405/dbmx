@@ -37,9 +37,9 @@ func (m *Connections) GetSqlite3Version() string {
 	return sqliteVersion
 }
 
-func (m *Connections) GetPostgresConnections() ([]model.Postgres, error) {
+func (m *Connections) GetPostgresConnections() ([]model.PostgresConnection, error) {
 	// Get all postgres connections
-	var connections []model.Postgres
+	var connections []model.PostgresConnection
 	rows, err := m.DB.Query("SELECT * FROM postgres")
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (m *Connections) GetPostgresConnections() ([]model.Postgres, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var connection model.Postgres
+		var connection model.PostgresConnection
 		err := rows.Scan(
 			&connection.ID,
 			&connection.Name,
@@ -58,6 +58,7 @@ func (m *Connections) GetPostgresConnections() ([]model.Postgres, error) {
 			&connection.Password,
 			&connection.Env,
 			&connection.Colour,
+			&connection.Database,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "unable to read resultant rows into connection variable")
@@ -72,7 +73,7 @@ func (m *Connections) GetPostgresConnections() ([]model.Postgres, error) {
 	return connections, nil
 }
 
-func (m *Connections) TestConnectPostgres(p model.Postgres) (bool, error) {
+func (m *Connections) TestConnectPostgres(p model.PostgresConnection) (bool, error) {
 	if p.Database == "" {
 		p.Database = "postgres"
 	}
@@ -101,7 +102,7 @@ func (m *Connections) TestConnectPostgres(p model.Postgres) (bool, error) {
 	return true, nil
 }
 
-func (c *Connections) AddPostgresConnection(p model.Postgres) (bool, error) {
+func (c *Connections) AddPostgresConnection(p model.PostgresConnection) (bool, error) {
 	if p.Database == "" {
 		p.Database = "postgres"
 	}
@@ -132,13 +133,9 @@ func (c *Connections) AddPostgresConnection(p model.Postgres) (bool, error) {
 	return true, nil
 }
 
-func (c *Connections) EstablishPostgresConnection(id int64, database string) (*int64, error) {
-	if database == "" {
-		database = "postgres"
-	}
-
+func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, error) {
 	// Query for a single row by ID
-	var host, port, username, password string
+	var host, port, username, password, database string
 	row := c.DB.QueryRow("SELECT host, port, username, password, database FROM postgres WHERE id = ?", id)
 
 	// Scan the result into variables
@@ -149,6 +146,12 @@ func (c *Connections) EstablishPostgresConnection(id int64, database string) (*i
 		} else {
 			return nil, err
 		}
+	}
+
+	database = strings.TrimSpace(database)
+
+	if database == "" {
+		database = "postgres"
 	}
 
 	// Make a connection string
@@ -191,14 +194,20 @@ func (c *Connections) EstablishPostgresConnection(id int64, database string) (*i
 		return nil, errors.Wrap(err, "failed to commit tx")
 	}
 
-	return &activePoolID, nil
+	return c.GetPostgresServerDatabases(id, activePoolID, database)
 }
 
-// Here pool means the active connection
-func (c *Connections) GetPostgresServerDatabases(activePoolID int64) ([]*string, error) {
+// Here, pool means the active connection to the database server
+func (c *Connections) GetPostgresServerDatabases(postgresConnectionID, activePoolID int64, activeDatabase string) ([]model.Database, error) {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
 		return nil, errors.New("pool doesn't exist")
+	}
+
+	// Get Tables of active database
+	tables, err := c.GetAllPostgresTables(activePoolID)
+	if err != nil {
+		return nil, err
 	}
 
 	// Get all database names of the active connection
@@ -209,16 +218,23 @@ func (c *Connections) GetPostgresServerDatabases(activePoolID int64) ([]*string,
 	defer rows.Close()
 
 	// Slice to hold results
-	var databases []*string
+	var databases []model.Database
 
 	// Iterate through the rows
 	for rows.Next() {
-		var database string
-		err := rows.Scan(&database)
+		var database model.Database
+		err := rows.Scan(&database.Name)
 		if err != nil {
 			return nil, err
 		}
-		databases = append(databases, &database)
+		database.PostgresConnectionID = postgresConnectionID
+		database.PoolID = activePoolID
+		if database.Name == activeDatabase {
+			database.IsActive = true
+			database.Tables = tables
+		}
+
+		databases = append(databases, database)
 	}
 
 	// Check for any error encountered during iteration
@@ -227,6 +243,40 @@ func (c *Connections) GetPostgresServerDatabases(activePoolID int64) ([]*string,
 	}
 
 	return databases, nil
+}
+
+func (c *Connections) GetAllPostgresTables(activePoolID int64) ([]string, error) {
+	pool, exists := c.PM.GetPool(activePoolID)
+	if !exists {
+		return nil, errors.New("pool doesn't exist")
+	}
+
+	// Get all tables
+	rows, err := pool.Query(context.TODO(), "SELECT * FROM pg_tables WHERE schemaname = 'public'")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Slice to hold results
+	var tables []string
+
+	// Iterate through the rows
+	for rows.Next() {
+		var table string
+		err := rows.Scan(&table)
+		if err != nil {
+			return nil, err
+		}
+		tables = append(tables, table)
+	}
+
+	// Check for any error encountered during iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return tables, nil
 }
 
 func (c *Connections) TerminatePostgresConnection(activePoolID int64) (bool, error) {
@@ -268,40 +318,6 @@ func (c *Connections) TerminatePostgresConnection(activePoolID int64) (bool, err
 	}
 
 	return true, nil
-}
-
-func (c *Connections) GetAllPostgresTables(activePoolID int64) ([]*string, error) {
-	pool, exists := c.PM.GetPool(activePoolID)
-	if !exists {
-		return nil, errors.New("pool doesn't exist")
-	}
-
-	// Get all tables
-	rows, err := pool.Query(context.TODO(), "SELECT * FROM pg_tables WHERE schemaname = 'public'")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	// Slice to hold results
-	var tables []*string
-
-	// Iterate through the rows
-	for rows.Next() {
-		var table string
-		err := rows.Scan(&table)
-		if err != nil {
-			return nil, err
-		}
-		tables = append(tables, &table)
-	}
-
-	// Check for any error encountered during iteration
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return tables, nil
 }
 
 func (c *Connections) ExecuteQuery(activePoolID int64, query string, args ...interface{}) *model.GenericResponse {

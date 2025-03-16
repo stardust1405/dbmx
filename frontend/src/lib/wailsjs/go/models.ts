@@ -28,6 +28,7 @@ export namespace model {
 	    Database: string;
 	    Env: string;
 	    Colour?: string;
+	    IsActive: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Postgres(source);
@@ -44,6 +45,7 @@ export namespace model {
 	        this.Database = source["Database"];
 	        this.Env = source["Env"];
 	        this.Colour = source["Colour"];
+	        this.IsActive = source["IsActive"];
 	    }
 	}
 	export class Tab {

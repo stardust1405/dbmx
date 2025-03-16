@@ -94,6 +94,9 @@
 	// Tab related operations
 	function getAllTabs() {
 		GetAllTabs().then((tabs) => {
+			if (!tabs) {
+				return;
+			}
 			for (const tab of tabs) {
 				tabsMap.set(tab.ID, tab);
 				tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
@@ -110,6 +113,15 @@
 			}
 		});
 	}
+
+	// Write a function to call addTab when pressed cmd + t
+	$effect(() => {
+		document.addEventListener('keydown', (event: KeyboardEvent) => {
+			if (event.key === 't' && event.metaKey) {
+				addTab();
+			}
+		});
+	});
 
 	function addTab() {
 		// Send default values for now in activeDBID and activeDB
