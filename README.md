@@ -4,6 +4,13 @@
 
 DBMX is a modern and productivity focused database management tool. It is under active development and is NOT ready for production use.
 
+### Early Preview
+<img width="1440" alt="Screenshot 2025-03-16 at 9 53 23 AM" src="https://github.com/user-attachments/assets/a5b962ca-3330-4c81-a4d4-550ebcd6025e" />
+<img width="1440" alt="Screenshot 2025-03-16 at 9 53 34 AM" src="https://github.com/user-attachments/assets/c221522d-3b2f-40a6-ab5e-9f496dd7bc31" />
+<img width="1440" alt="Screenshot 2025-03-16 at 9 54 40 AM" src="https://github.com/user-attachments/assets/a7406e8a-a76a-4648-bc9b-4777fd79d6fb" />
+
+
+
 ## Live Development
 
 To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
