@@ -1,8 +1,8 @@
 # README
 
-## About
+## DBMX
 
-DBMX is a modern and productivity focused database management tool. It is under active development and is NOT ready for production use.
+A modern and productivity focused database management tool. It is under active development and is NOT ready for production use.
 
 ## Early Preview
 #### Sidebar and Tabs
