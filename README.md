@@ -14,7 +14,11 @@ A modern and productivity focused database management tool. It is under active d
 #### Resizable Editor View and Autocomplete Suggestions
 <img width="1440" alt="Screenshot 2025-03-16 at 9 54 40 AM" src="https://github.com/user-attachments/assets/a7406e8a-a76a-4648-bc9b-4777fd79d6fb" />
 
-
+## Tech Stack
+- Wails Go
+- Svelte 5
+- Shadcn UI
+- SQLite3db
 
 ## Live Development
 
