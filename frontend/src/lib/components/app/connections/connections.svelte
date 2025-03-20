@@ -5,7 +5,7 @@
 
 	import { GetPostgresConnections } from '$lib/wailsjs/go/app/Connections';
 
-	let postgresConnections = $state<Array<model.Postgres>>();
+	let postgresConnections = $state<Array<model.PostgresConnection>>();
 
 	onMount(() => {
 		GetPostgresConnections().then((connections) => (postgresConnections = connections));

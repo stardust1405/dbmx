@@ -120,7 +120,7 @@ func (c *Connections) AddPostgresConnection(p model.PostgresConnection) (bool, e
 		return false, errors.New("Connection name already exists. Please choose a different name")
 	}
 
-	insertStatement, err := c.DB.Prepare("INSERT INTO postgres (name, host, port, username, password, env, colour, default_db) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
+	insertStatement, err := c.DB.Prepare("INSERT INTO postgres (name, host, port, username, password, env, colour, database) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return false, errors.Wrap(err, "failed to prepare query to insert new connection in postgres")
 	}
@@ -164,6 +164,7 @@ func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, e
 		return nil, err
 	}
 
+	// Insert into sqlite
 	insertStatement, err := tx.Prepare("INSERT INTO postgres_active_db (postgres_id, database) VALUES (?, ?)")
 	if err != nil {
 		tx.Rollback()
@@ -252,7 +253,7 @@ func (c *Connections) GetAllPostgresTables(activePoolID int64) ([]string, error)
 	}
 
 	// Get all tables
-	rows, err := pool.Query(context.TODO(), "SELECT * FROM pg_tables WHERE schemaname = 'public'")
+	rows, err := pool.Query(context.TODO(), "SELECT tablename FROM pg_tables WHERE schemaname = 'public'")
 	if err != nil {
 		return nil, err
 	}

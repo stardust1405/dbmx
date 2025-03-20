@@ -71,7 +71,7 @@
 			return;
 		}
 
-		const connectPostgresData = new model.Postgres({
+		const connectPostgresData = new model.PostgresConnection({
 			Name: name,
 			Env: env,
 			Host: host,
@@ -152,7 +152,7 @@
 			return;
 		}
 
-		const testConnectPostgresData = new model.Postgres({
+		const testConnectPostgresData = new model.PostgresConnection({
 			Name: name,
 			Env: env,
 			Host: host,

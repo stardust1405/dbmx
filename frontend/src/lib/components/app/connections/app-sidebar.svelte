@@ -71,26 +71,48 @@
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
-	import File from 'lucide-svelte/icons/file';
-	import Folder from 'lucide-svelte/icons/folder';
 	import Plus from 'lucide-svelte/icons/plus';
+	import Activity from 'lucide-svelte/icons/activity';
+	import Table2 from 'lucide-svelte/icons/table-2';
+	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import SettingsDialog from '$lib/components/settings-dialog.svelte';
 	import { type ComponentProps } from 'svelte';
-	import { ActiveConnection } from './app-sidebar';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
-	let postgresConnections: Array<model.Postgres> = $state([]);
+	let postgresConnections: Array<model.PostgresConnection> = $state([]);
 
-	import { GetPostgresConnections } from '$lib/wailsjs/go/app/Connections';
+	import {
+		EstablishPostgresConnection,
+		GetPostgresConnections
+	} from '$lib/wailsjs/go/app/Connections';
+	import Button from '$lib/components/ui/button/button.svelte';
+	import Check from 'lucide-svelte/icons/check';
 	onMount(() => {
 		GetPostgresConnections().then((connections) => (postgresConnections = connections));
 	});
 
+	const refresh = () => {
+		GetPostgresConnections().then((connections) => (postgresConnections = connections));
+	};
+
 	$effect(() => {
-		console.log(postgresConnections);
-		console.log(postgresConnections);
+		console.log(databases);
 	});
+
+	let databases: Array<model.Database> = $state([]);
+
+	let loading = $state(true);
+
+	function establishConnection(id: number) {
+		if (databases.length > 0) {
+			return;
+		}
+		EstablishPostgresConnection(id).then((dbs) => {
+			databases = dbs;
+			loading = false;
+		});
+	}
 </script>
 
 <Sidebar.Root bind:ref {...restProps}>
@@ -112,24 +134,61 @@
 			</Sidebar.GroupContent>
 		</Sidebar.Group> -->
 		<Sidebar.Group>
-			<Sidebar.GroupLabel>Connections</Sidebar.GroupLabel>
+			<Sidebar.GroupLabel>
+				<div class="flex items-center">
+					Connections
+					<Button onclick={() => refresh()}>
+						<RefreshCw />
+					</Button>
+				</div>
+			</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each postgresConnections as connection, index (index)}
 						<Sidebar.MenuItem>
 							<Collapsible.Root>
-								<Collapsible.Trigger>
+								<Collapsible.Trigger onclick={() => establishConnection(connection.ID)}>
 									<Sidebar.MenuButton>
-										<Folder />
+										<ChevronRight className="transition-transform" />
+
 										{connection.Name}
 									</Sidebar.MenuButton>
 								</Collapsible.Trigger>
 								<Collapsible.Content>
 									<Sidebar.MenuSub>
-										<Folder />
-										{connection.ID}
-										{connection.Database}
-										{connection.Env}
+										{#if loading}
+											<p>Loading...</p>
+										{:else if databases.length > 0}
+											{#each databases as database, index}
+												<Collapsible.Root>
+													<Collapsible.Trigger>
+														<Sidebar.MenuButton>
+															<ChevronRight className="transition-transform" />
+															{database.Name}
+															{#if database.IsActive}
+																<Activity color="#4fff4d" />
+															{/if}
+														</Sidebar.MenuButton>
+													</Collapsible.Trigger>
+													<Collapsible.Content>
+														{#if database.Tables}
+															{#each database.Tables as table, index}
+																<Sidebar.MenuSub>
+																	<Sidebar.MenuButton>
+																		<Table2 color="#fd6868" strokeWidth={2} size={25} />
+																		<p>{table}</p>
+																	</Sidebar.MenuButton>
+																</Sidebar.MenuSub>
+															{/each}
+														{:else}
+															<Sidebar.MenuSub>No tables found.</Sidebar.MenuSub>
+														{/if}
+													</Collapsible.Content>
+												</Collapsible.Root>
+											{/each}
+										{:else}
+											<p>No databases found.</p>
+										{/if}
 									</Sidebar.MenuSub>
 								</Collapsible.Content>
 							</Collapsible.Root>

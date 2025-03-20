@@ -1,5 +1,25 @@
 export namespace model {
 	
+	export class Database {
+	    PostgresConnectionID: number;
+	    PoolID: number;
+	    Name: string;
+	    IsActive: boolean;
+	    Tables: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new Database(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.PostgresConnectionID = source["PostgresConnectionID"];
+	        this.PoolID = source["PoolID"];
+	        this.Name = source["Name"];
+	        this.IsActive = source["IsActive"];
+	        this.Tables = source["Tables"];
+	    }
+	}
 	export class GenericResponse {
 	    ok: boolean;
 	    data: any[];
@@ -18,7 +38,7 @@ export namespace model {
 	        this.message = source["message"];
 	    }
 	}
-	export class Postgres {
+	export class PostgresConnection {
 	    ID: number;
 	    Name: string;
 	    Host: string;
@@ -31,7 +51,7 @@ export namespace model {
 	    IsActive: boolean;
 	
 	    static createFrom(source: any = {}) {
-	        return new Postgres(source);
+	        return new PostgresConnection(source);
 	    }
 	
 	    constructor(source: any = {}) {

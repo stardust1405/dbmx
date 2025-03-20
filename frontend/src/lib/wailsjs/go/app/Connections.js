@@ -6,8 +6,8 @@ export function AddPostgresConnection(arg1) {
   return window['go']['app']['Connections']['AddPostgresConnection'](arg1);
 }
 
-export function EstablishPostgresConnection(arg1, arg2) {
-  return window['go']['app']['Connections']['EstablishPostgresConnection'](arg1, arg2);
+export function EstablishPostgresConnection(arg1) {
+  return window['go']['app']['Connections']['EstablishPostgresConnection'](arg1);
 }
 
 export function ExecuteQuery(arg1, arg2, arg3) {
@@ -22,8 +22,8 @@ export function GetPostgresConnections() {
   return window['go']['app']['Connections']['GetPostgresConnections']();
 }
 
-export function GetPostgresServerDatabases(arg1) {
-  return window['go']['app']['Connections']['GetPostgresServerDatabases'](arg1);
+export function GetPostgresServerDatabases(arg1, arg2, arg3) {
+  return window['go']['app']['Connections']['GetPostgresServerDatabases'](arg1, arg2, arg3);
 }
 
 export function GetSqlite3Version() {
