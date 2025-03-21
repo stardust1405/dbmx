@@ -87,7 +87,7 @@
 		GetPostgresConnections
 	} from '$lib/wailsjs/go/app/Connections';
 	import Button from '$lib/components/ui/button/button.svelte';
-	import Check from 'lucide-svelte/icons/check';
+
 	onMount(() => {
 		GetPostgresConnections().then((connections) => (postgresConnections = connections));
 	});
@@ -135,9 +135,9 @@
 		</Sidebar.Group> -->
 		<Sidebar.Group>
 			<Sidebar.GroupLabel>
-				<div class="flex items-center">
+				<div class="flex w-full items-center justify-between">
 					Connections
-					<Button onclick={() => refresh()}>
+					<Button size="sm" variant="ghost" onclick={() => refresh()}>
 						<RefreshCw />
 					</Button>
 				</div>
@@ -145,7 +145,7 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each postgresConnections as connection, index (index)}
-						<Sidebar.MenuItem>
+						<Sidebar.MenuItem class="bg-green-500 bg-opacity-15 hover:bg-opacity-20">
 							<Collapsible.Root>
 								<Collapsible.Trigger onclick={() => establishConnection(connection.ID)}>
 									<Sidebar.MenuButton>

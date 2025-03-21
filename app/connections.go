@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -164,24 +165,7 @@ func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, e
 		return nil, err
 	}
 
-	// Insert into sqlite
-	insertStatement, err := tx.Prepare("INSERT INTO postgres_active_db (postgres_id, database) VALUES (?, ?)")
-	if err != nil {
-		tx.Rollback()
-		return nil, errors.Wrap(err, "failed to prepare query to insert into postgres_active_db")
-	}
-
-	res, err := insertStatement.Exec(id, database)
-	if err != nil {
-		tx.Rollback()
-		return nil, errors.Wrap(err, "failed to insert new connection in postgres_active_db")
-	}
-
-	activePoolID, err := res.LastInsertId()
-	if err != nil {
-		tx.Rollback()
-		return nil, err
-	}
+	activePoolID := uuid.New()
 
 	// Establish connection and add pool to active pool manager
 	_, err = c.PM.AddPool(activePoolID, connString)
@@ -199,7 +183,7 @@ func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, e
 }
 
 // Here, pool means the active connection to the database server
-func (c *Connections) GetPostgresServerDatabases(postgresConnectionID, activePoolID int64, activeDatabase string) ([]model.Database, error) {
+func (c *Connections) GetPostgresServerDatabases(postgresConnectionID int64, activePoolID uuid.UUID, activeDatabase string) ([]model.Database, error) {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
 		return nil, errors.New("pool doesn't exist")
@@ -246,7 +230,7 @@ func (c *Connections) GetPostgresServerDatabases(postgresConnectionID, activePoo
 	return databases, nil
 }
 
-func (c *Connections) GetAllPostgresTables(activePoolID int64) ([]string, error) {
+func (c *Connections) GetAllPostgresTables(activePoolID uuid.UUID) ([]string, error) {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
 		return nil, errors.New("pool doesn't exist")
@@ -280,30 +264,11 @@ func (c *Connections) GetAllPostgresTables(activePoolID int64) ([]string, error)
 	return tables, nil
 }
 
-func (c *Connections) TerminatePostgresConnection(activePoolID int64) (bool, error) {
+func (c *Connections) TerminatePostgresConnection(activePoolID uuid.UUID) (bool, error) {
 	// Start a transaction
 	tx, err := c.DB.Begin()
 	if err != nil {
 		return false, err
-	}
-
-	// Delete from active postgres db
-	result, err := tx.Exec(`DELETE FROM postgres_active_db WHERE id = ?`, activePoolID)
-	if err != nil {
-		tx.Rollback()
-		return false, err
-	}
-
-	// Get the number of rows affected
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		tx.Rollback()
-		return false, err
-	}
-
-	if rowsAffected != 1 {
-		tx.Rollback()
-		return false, errors.New("failed to delete from active postgres db")
 	}
 
 	// Remove the db pool from active pools
@@ -321,7 +286,7 @@ func (c *Connections) TerminatePostgresConnection(activePoolID int64) (bool, err
 	return true, nil
 }
 
-func (c *Connections) ExecuteQuery(activePoolID int64, query string, args ...interface{}) *model.GenericResponse {
+func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, args ...interface{}) *model.GenericResponse {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
 		return errorResponse(errors.New("pool doesn't exist"))

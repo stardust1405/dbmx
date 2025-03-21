@@ -5,21 +5,22 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type PoolManager struct {
-	Pools map[int64]*pgxpool.Pool
+	Pools map[uuid.UUID]*pgxpool.Pool
 	mu    sync.RWMutex
 }
 
 func NewPoolManager() *PoolManager {
 	return &PoolManager{
-		Pools: make(map[int64]*pgxpool.Pool),
+		Pools: make(map[uuid.UUID]*pgxpool.Pool),
 	}
 }
 
-func (pm *PoolManager) AddPool(id int64, connString string) (*pgxpool.Pool, error) {
+func (pm *PoolManager) AddPool(id uuid.UUID, connString string) (*pgxpool.Pool, error) {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
@@ -31,14 +32,14 @@ func (pm *PoolManager) AddPool(id int64, connString string) (*pgxpool.Pool, erro
 	return pool, nil
 }
 
-func (pm *PoolManager) GetPool(id int64) (*pgxpool.Pool, bool) {
+func (pm *PoolManager) GetPool(id uuid.UUID) (*pgxpool.Pool, bool) {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
 	pool, exists := pm.Pools[id]
 	return pool, exists
 }
 
-func (pm *PoolManager) DeletePool(id int64) error {
+func (pm *PoolManager) DeletePool(id uuid.UUID) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 

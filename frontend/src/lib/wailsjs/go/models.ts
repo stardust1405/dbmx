@@ -2,7 +2,7 @@ export namespace model {
 	
 	export class Database {
 	    PostgresConnectionID: number;
-	    PoolID: number;
+	    PoolID: number[];
 	    Name: string;
 	    IsActive: boolean;
 	    Tables: string[];
@@ -47,7 +47,7 @@ export namespace model {
 	    Password: string;
 	    Database: string;
 	    Env: string;
-	    Colour?: string;
+	    Colour: string;
 	    IsActive: boolean;
 	
 	    static createFrom(source: any = {}) {
