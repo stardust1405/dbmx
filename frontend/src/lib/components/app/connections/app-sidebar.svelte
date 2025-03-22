@@ -1,70 +1,6 @@
 <script lang="ts" module>
 	import { onMount } from 'svelte';
 	import type { model } from '$lib/wailsjs/go/models';
-
-	// This is sample data.
-	const data = {
-		changes: [
-			{
-				file: 'README.md',
-				state: 'M'
-			},
-			{
-				file: 'routes/+page.svelte',
-				state: 'U'
-			},
-			{
-				file: 'routes/+layout.svelte',
-				state: 'M'
-			}
-		],
-		tree: [
-			// ['Postgres - local', 'inventorydb', 'reportingdb'],
-			[
-				{
-					name: 'Stage Inventory',
-					env: 'local',
-					colour: 'purple'
-				}
-				// {
-				// 	name: 'inventorydb',
-				// 	env: 'local',
-				// 	colour: 'purple'
-				// },
-				// {
-				// 	name: 'reportingdb',
-				// 	env: 'local',
-				// 	colour: 'purple'
-				// }
-			],
-			[
-				{
-					name: 'Prod Inventory',
-					env: 'prod',
-					colour: 'purple'
-				}
-				// {
-				// 	name: 'inventorydb',
-				// 	env: 'local',
-				// 	colour: 'purple'
-				// },
-				// {
-				// 	name: 'reportingdb',
-				// 	env: 'local',
-				// 	colour: 'purple'
-				// }
-			]
-			// ['lib', ['components', 'button.svelte', 'card.svelte'], 'utils.ts'],
-			// [
-			// 	'routes',
-			// 	['hello', '+page.svelte', '+page.ts'],
-			// 	'+page.svelte',
-			// 	'+page.server.ts',
-			// 	'+layout.svelte'
-			// ],
-			// ['static', 'favicon.ico', 'svelte.svg']
-		]
-	};
 </script>
 
 <script lang="ts">
@@ -216,22 +152,6 @@
 
 <Sidebar.Root bind:ref {...restProps}>
 	<Sidebar.Content>
-		<!-- <Sidebar.Group>
-			<Sidebar.GroupLabel>Favourites</Sidebar.GroupLabel>
-			<Sidebar.GroupContent>
-				<Sidebar.Menu>
-					{#each data.changes as item, index (index)}
-						<Sidebar.MenuItem>
-							<Sidebar.MenuButton>
-								<File />
-								{item.file}
-							</Sidebar.MenuButton>
-							<Sidebar.MenuBadge>{item.state}</Sidebar.MenuBadge>
-						</Sidebar.MenuItem>
-					{/each}
-				</Sidebar.Menu>
-			</Sidebar.GroupContent>
-		</Sidebar.Group> -->
 		<Sidebar.Group>
 			<Sidebar.GroupLabel>
 				<div class="flex w-full items-center justify-between">
@@ -319,41 +239,3 @@
 	</Sidebar.Footer>
 	<Sidebar.Rail />
 </Sidebar.Root>
-
-<!-- eslint-disable-next-line @typescript-eslint/no-explicit-any
-{#snippet Tree({ item }: { item: string | any[] })}
-	{@const [name, ...items] = Array.isArray(item) ? item : [item]}
-	{#if !items.length}
-		<Sidebar.MenuButton
-			isActive={name === 'button.svelte'}
-			class="data-[active=true]:bg-transparent"
-		>
-			<File />
-			{name.name} - {name.env}
-		</Sidebar.MenuButton>
-	{:else}
-		<Sidebar.MenuItem>
-			<Collapsible.Root
-				class="group/collapsible [&[data-state=open]>button>svg:first-child]:rotate-90"
-				open={name === 'lib' || name === 'components'}
-			>
-				<Collapsible.Trigger>
-					{#snippet child({ props })}
-						<Sidebar.MenuButton {...props}>
-							<ChevronRight className="transition-transform" />
-							<Folder />
-							{name.name} - {name.env}
-						</Sidebar.MenuButton>
-					{/snippet}
-				</Collapsible.Trigger>
-				<Collapsible.Content>
-					<Sidebar.MenuSub>
-						{#each items as subItem, index (index)}
-							{@render Tree({ item: subItem })}
-						{/each}
-					</Sidebar.MenuSub>
-				</Collapsible.Content>
-			</Collapsible.Root>
-		</Sidebar.MenuItem>
-	{/if}
-{/snippet} -->
