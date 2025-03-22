@@ -80,7 +80,11 @@
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
-	let postgresConnections: Array<model.PostgresConnection> = $state([]);
+	// let postgresConnections: Array<model.PostgresConnection> = $state([]);
+	let postgresConnectionsMap = $state<Map<number, model.PostgresConnection>>(
+		new Map<number, model.PostgresConnection>()
+	);
+	let databases: Array<model.Database> = $state([]);
 
 	import {
 		EstablishPostgresConnection,
@@ -89,18 +93,29 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 
 	onMount(() => {
-		GetPostgresConnections().then((connections) => (postgresConnections = connections));
+		// GetPostgresConnections().then((connections) => (postgresConnections = connections));
+		GetPostgresConnections().then((connections) => {
+			for (let connection of connections) {
+				postgresConnectionsMap.set(connection.ID, connection);
+			}
+			postgresConnectionsMap = new Map(postgresConnectionsMap); // Reassign to trigger reactivity
+		});
 	});
 
 	const refresh = () => {
-		GetPostgresConnections().then((connections) => (postgresConnections = connections));
+		// GetPostgresConnections().then((connections) => (postgresConnections = connections));
+		GetPostgresConnections().then((connections) => {
+			for (let connection of connections) {
+				postgresConnectionsMap.set(connection.ID, connection);
+			}
+			postgresConnectionsMap = new Map(postgresConnectionsMap); // Reassign to trigger reactivity
+		});
 	};
 
 	$effect(() => {
 		console.log(databases);
+		console.log(postgresConnectionsMap);
 	});
-
-	let databases: Array<model.Database> = $state([]);
 
 	let loading = $state(true);
 
@@ -116,9 +131,9 @@
 
 	function getColorClass(color: string): string {
 		const colorMap: Record<string, string> = {
-			'bg-red-500': 'bg-red-500',
-			'bg-blue-500': 'bg-blue-500',
-			'bg-green-500': 'bg-green-500'
+			'bg-purple-500': 'bg-purple-500',
+			'bg-indigo-500': 'bg-indigo-500',
+			'bg-emerald-500': 'bg-emerald-500'
 		};
 		return colorMap[color] || '';
 	}
@@ -153,7 +168,7 @@
 			</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
-					{#each postgresConnections as connection, index (index)}
+					{#each Array.from(postgresConnectionsMap.entries()) as [key, connection]}
 						<Sidebar.MenuItem
 							class="{getColorClass(connection.Colour)} bg-opacity-20 hover:bg-opacity-25"
 						>

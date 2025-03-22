@@ -2,7 +2,7 @@ export namespace model {
 	
 	export class Database {
 	    PostgresConnectionID: number;
-	    PoolID: number[];
+	    PoolID: string;
 	    Name: string;
 	    IsActive: boolean;
 	    Tables: string[];

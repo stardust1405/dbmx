@@ -213,7 +213,7 @@ func (c *Connections) GetPostgresServerDatabases(postgresConnectionID int64, act
 			return nil, err
 		}
 		database.PostgresConnectionID = postgresConnectionID
-		database.PoolID = activePoolID
+		database.PoolID = activePoolID.String()
 		if database.Name == activeDatabase {
 			database.IsActive = true
 			database.Tables = tables

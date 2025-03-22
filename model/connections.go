@@ -1,7 +1,5 @@
 package model
 
-import "github.com/google/uuid"
-
 // PostgresConnection represents a connection to a PostgreSQL server
 type PostgresConnection struct {
 	ID       int64
@@ -18,7 +16,7 @@ type PostgresConnection struct {
 
 type Database struct {
 	PostgresConnectionID int64
-	PoolID               uuid.UUID
+	PoolID               string
 	Name                 string
 	IsActive             bool
 	Tables               []string
