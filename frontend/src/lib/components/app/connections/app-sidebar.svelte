@@ -77,56 +77,131 @@
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import SettingsDialog from '$lib/components/settings-dialog.svelte';
 	import { type ComponentProps } from 'svelte';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
 	// let postgresConnections: Array<model.PostgresConnection> = $state([]);
-	let postgresConnectionsMap = $state<Map<number, model.PostgresConnection>>(
-		new Map<number, model.PostgresConnection>()
+	let postgresConnectionsMap = $state<SvelteMap<number, model.PostgresConnection>>(
+		new SvelteMap<number, model.PostgresConnection>()
 	);
-	let databases: Array<model.Database> = $state([]);
+	let connectionDatabasesMap = $state<SvelteMap<number, string[]>>(
+		new SvelteMap<number, string[]>()
+	);
+	let databasesMap = $state<SvelteMap<string, model.Database>>(
+		new SvelteMap<string, model.Database>()
+	);
 
 	import {
 		EstablishPostgresConnection,
+		EstablishPostgresDatabaseConnection,
 		GetPostgresConnections
 	} from '$lib/wailsjs/go/app/Connections';
 	import Button from '$lib/components/ui/button/button.svelte';
+	import { toast } from 'svelte-sonner';
+	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 
 	onMount(() => {
-		// GetPostgresConnections().then((connections) => (postgresConnections = connections));
-		GetPostgresConnections().then((connections) => {
-			for (let connection of connections) {
-				postgresConnectionsMap.set(connection.ID, connection);
-			}
-			postgresConnectionsMap = new Map(postgresConnectionsMap); // Reassign to trigger reactivity
-		});
+		GetPostgresConnections()
+			.then((connections) => {
+				for (let connection of connections) {
+					postgresConnectionsMap.set(connection.ID, connection);
+				}
+			})
+			.catch((error) => {
+				// Handle errors from the EstablishPostgresDatabaseConnection call
+				toast.error('Connection Failed', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
 	});
 
 	const refresh = () => {
-		// GetPostgresConnections().then((connections) => (postgresConnections = connections));
-		GetPostgresConnections().then((connections) => {
-			for (let connection of connections) {
-				postgresConnectionsMap.set(connection.ID, connection);
-			}
-			postgresConnectionsMap = new Map(postgresConnectionsMap); // Reassign to trigger reactivity
-		});
+		GetPostgresConnections()
+			.then((connections) => {
+				for (let connection of connections) {
+					postgresConnectionsMap.set(connection.ID, connection);
+				}
+			})
+			.catch((error) => {
+				// Handle errors from the EstablishPostgresDatabaseConnection call
+				toast.error('Connection Failed', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
 	};
 
-	$effect(() => {
-		console.log(databases);
-		console.log(postgresConnectionsMap);
-	});
+	let loadingMap = $state<SvelteMap<number, boolean>>(new SvelteMap<number, boolean>());
+	let dbLoadingMap = $state<SvelteMap<string, boolean>>(new SvelteMap<string, boolean>());
 
-	let loading = $state(true);
+	function establishDatabaseConnection(id: number, dbID: string) {
+		dbLoadingMap.set(dbID, true);
 
-	function establishConnection(id: number) {
-		if (databases.length > 0) {
+		let db = databasesMap.get(dbID);
+		// Check if connection is already established
+		if (db?.IsActive) {
+			dbLoadingMap.set(dbID, false);
 			return;
 		}
-		EstablishPostgresConnection(id).then((dbs) => {
-			databases = dbs;
-			loading = false;
-		});
+
+		// Establish connection
+		EstablishPostgresDatabaseConnection(id, dbID, db?.Name || '')
+			.then((db) => {
+				dbLoadingMap.set(dbID, false);
+				databasesMap.set(db.ID, db);
+			})
+			.catch((error) => {
+				dbLoadingMap.set(dbID, false);
+
+				toast.error('Connection Failed', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
+	}
+
+	function establishConnection(id: number) {
+		loadingMap.set(id, true);
+		// Check if connection is already established
+		if ((connectionDatabasesMap.get(id)?.length || 0) > 0) {
+			loadingMap.set(id, false);
+			return;
+		}
+
+		// Establish connection
+		EstablishPostgresConnection(id)
+			.then((dbs) => {
+				for (let db of dbs) {
+					databasesMap.set(db.ID, db);
+				}
+				connectionDatabasesMap.set(
+					id,
+					dbs.map((db) => db.ID)
+				);
+				loadingMap.set(id, false);
+			})
+			.catch((error) => {
+				loadingMap.set(id, false);
+				// Handle errors from the EstablishPostgresDatabaseConnection call
+				toast.error('Connection Failed', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
 	}
 
 	function getColorClass(color: string): string {
@@ -182,38 +257,46 @@
 								</Collapsible.Trigger>
 								<Collapsible.Content>
 									<Sidebar.MenuSub>
-										{#if loading}
-											<p>Loading...</p>
-										{:else if databases.length > 0}
-											{#each databases as database, index}
+										{#if loadingMap.get(connection.ID)}
+											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+										{:else if (connectionDatabasesMap.get(connection.ID) || []).length > 0}
+											{#each connectionDatabasesMap.get(connection.ID) || [] as databaseID}
 												<Collapsible.Root>
-													<Collapsible.Trigger>
+													<Collapsible.Trigger
+														onclick={() => establishDatabaseConnection(connection.ID, databaseID)}
+													>
 														<Sidebar.MenuButton>
 															<ChevronRight className="transition-transform" />
-															{database.Name}
-															{#if database.IsActive}
+															{databasesMap.get(databaseID)?.Name}
+															{#if databasesMap.get(databaseID)?.IsActive}
 																<Activity color="#4fff4d" />
 															{/if}
 														</Sidebar.MenuButton>
 													</Collapsible.Trigger>
 													<Collapsible.Content>
-														{#if database.Tables}
-															{#each database.Tables as table, index}
-																<Sidebar.MenuSub>
+														<Sidebar.MenuSub>
+															{#if dbLoadingMap.get(databaseID)}
+																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+															{:else if (databasesMap.get(databaseID)?.Tables || []).length > 0}
+																{#each databasesMap.get(databaseID)?.Tables || [] as table}
 																	<Sidebar.MenuButton>
 																		<Table2 color="#fd6868" strokeWidth={2} size={25} />
 																		<p>{table}</p>
 																	</Sidebar.MenuButton>
-																</Sidebar.MenuSub>
-															{/each}
-														{:else}
-															<Sidebar.MenuSub>No tables found.</Sidebar.MenuSub>
-														{/if}
+																{/each}
+															{:else}
+																No tables found
+															{/if}
+														</Sidebar.MenuSub>
 													</Collapsible.Content>
 												</Collapsible.Root>
 											{/each}
 										{:else}
-											<p>No databases found.</p>
+											No databases found
 										{/if}
 									</Sidebar.MenuSub>
 								</Collapsible.Content>

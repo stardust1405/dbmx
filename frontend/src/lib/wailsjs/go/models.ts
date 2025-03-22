@@ -1,9 +1,10 @@
 export namespace model {
 	
 	export class Database {
+	    ID: string;
 	    PostgresConnectionID: number;
-	    PoolID: string;
 	    Name: string;
+	    PoolID: string;
 	    IsActive: boolean;
 	    Tables: string[];
 	
@@ -13,9 +14,10 @@ export namespace model {
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ID = source["ID"];
 	        this.PostgresConnectionID = source["PostgresConnectionID"];
-	        this.PoolID = source["PoolID"];
 	        this.Name = source["Name"];
+	        this.PoolID = source["PoolID"];
 	        this.IsActive = source["IsActive"];
 	        this.Tables = source["Tables"];
 	    }

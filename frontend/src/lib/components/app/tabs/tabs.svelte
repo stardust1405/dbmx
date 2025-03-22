@@ -21,6 +21,7 @@
 		SetActiveTab,
 		UpdateTabEditorContent
 	} from '$lib/wailsjs/go/app/Tabs';
+	import { SvelteMap } from 'svelte/reactivity';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
@@ -89,7 +90,7 @@
 	});
 
 	// Declare tabsMap as a reactive state variable
-	let tabsMap = $state<Map<number, model.Tab>>(new Map<number, model.Tab>());
+	let tabsMap = $state<SvelteMap<number, model.Tab>>(new SvelteMap<number, model.Tab>());
 
 	// Tab related operations
 	function getAllTabs() {
@@ -99,7 +100,6 @@
 			}
 			for (const tab of tabs) {
 				tabsMap.set(tab.ID, tab);
-				tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
 
 				// Set active tab properties
 				if (tab.IsActive) {
@@ -127,7 +127,6 @@
 		// Send default values for now in activeDBID and activeDB
 		AddTab(0, '').then((tab) => {
 			tabsMap.set(tab.ID, tab);
-			tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
 
 			tabID = tab.ID;
 			tabName = tab.Name;
@@ -140,11 +139,9 @@
 
 	function deleteTab(id: number) {
 		tabsMap.delete(id);
-		tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
 		DeleteTab(id).then((tab) => {
 			if (tab) {
 				tabsMap.set(tab.ID, tab);
-				tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
 
 				tabID = tab.ID;
 				tabName = tab.Name;
@@ -160,7 +157,6 @@
 	function setActiveTab(id: number) {
 		SetActiveTab(id).then((tab) => {
 			tabsMap.set(tab.ID, tab);
-			tabsMap = new Map(tabsMap); // Reassign to trigger reactivity
 
 			tabID = tab.ID;
 			tabName = tab.Name;

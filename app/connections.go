@@ -134,6 +134,48 @@ func (c *Connections) AddPostgresConnection(p model.PostgresConnection) (bool, e
 	return true, nil
 }
 
+func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName string) (*model.Database, error) {
+	// Query for a single row by ID
+	var host, port, username, password string
+	row := c.DB.QueryRow("SELECT host, port, username, password FROM postgres WHERE id = ?", id)
+
+	// Scan the result into variables
+	err := row.Scan(&host, &port, &username, &password)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.Wrap(err, "postgres server not found")
+		} else {
+			return nil, err
+		}
+	}
+
+	// Make a connection string
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", username, password, host, port, dbName)
+
+	activePoolID := uuid.New()
+
+	// Establish connection and add pool to active pool manager
+	_, err = c.PM.AddPool(activePoolID, connString)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all tables
+	tables, err := c.GetAllPostgresTables(activePoolID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Database{
+		ID:                   dbID,
+		Name:                 dbName,
+		PostgresConnectionID: id,
+		PoolID:               activePoolID.String(),
+		IsActive:             true,
+		Tables:               tables,
+	}, nil
+}
+
 func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, error) {
 	// Query for a single row by ID
 	var host, port, username, password, database string
@@ -158,25 +200,12 @@ func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, e
 	// Make a connection string
 	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", username, password, host, port, database)
 
-	// Add to postgres active db table
-	// Start a transaction
-	tx, err := c.DB.Begin()
-	if err != nil {
-		return nil, err
-	}
-
 	activePoolID := uuid.New()
 
 	// Establish connection and add pool to active pool manager
 	_, err = c.PM.AddPool(activePoolID, connString)
 	if err != nil {
-		tx.Rollback()
 		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return nil, errors.Wrap(err, "failed to commit tx")
 	}
 
 	return c.GetPostgresServerDatabases(id, activePoolID, database)
@@ -212,9 +241,10 @@ func (c *Connections) GetPostgresServerDatabases(postgresConnectionID int64, act
 		if err != nil {
 			return nil, err
 		}
+		database.ID = "db_" + uuid.New().String()
 		database.PostgresConnectionID = postgresConnectionID
-		database.PoolID = activePoolID.String()
 		if database.Name == activeDatabase {
+			database.PoolID = activePoolID.String()
 			database.IsActive = true
 			database.Tables = tables
 		}

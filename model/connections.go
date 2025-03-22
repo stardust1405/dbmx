@@ -15,11 +15,14 @@ type PostgresConnection struct {
 }
 
 type Database struct {
+	ID                   string
 	PostgresConnectionID int64
-	PoolID               string
 	Name                 string
-	IsActive             bool
-	Tables               []string
+
+	// Only set for active connection
+	PoolID   string
+	IsActive bool
+	Tables   []string
 }
 
 type GenericResponse struct {

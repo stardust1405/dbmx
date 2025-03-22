@@ -10,6 +10,10 @@ export function EstablishPostgresConnection(arg1) {
   return window['go']['app']['Connections']['EstablishPostgresConnection'](arg1);
 }
 
+export function EstablishPostgresDatabaseConnection(arg1, arg2, arg3) {
+  return window['go']['app']['Connections']['EstablishPostgresDatabaseConnection'](arg1, arg2, arg3);
+}
+
 export function ExecuteQuery(arg1, arg2, arg3) {
   return window['go']['app']['Connections']['ExecuteQuery'](arg1, arg2, arg3);
 }
