@@ -113,6 +113,15 @@
 			loading = false;
 		});
 	}
+
+	function getColorClass(color: string): string {
+		const colorMap: Record<string, string> = {
+			'bg-red-500': 'bg-red-500',
+			'bg-blue-500': 'bg-blue-500',
+			'bg-green-500': 'bg-green-500'
+		};
+		return colorMap[color] || '';
+	}
 </script>
 
 <Sidebar.Root bind:ref {...restProps}>
@@ -145,7 +154,9 @@
 			<Sidebar.GroupContent>
 				<Sidebar.Menu>
 					{#each postgresConnections as connection, index (index)}
-						<Sidebar.MenuItem class="bg-green-500 bg-opacity-15 hover:bg-opacity-20">
+						<Sidebar.MenuItem
+							class="{getColorClass(connection.Colour)} bg-opacity-20 hover:bg-opacity-25"
+						>
 							<Collapsible.Root>
 								<Collapsible.Trigger onclick={() => establishConnection(connection.ID)}>
 									<Sidebar.MenuButton>

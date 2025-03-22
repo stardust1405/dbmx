@@ -30,6 +30,7 @@
 	let username = $state('');
 	let password = $state('');
 	let database = $state('');
+	let colour = $state('');
 
 	let connectPostgres = async (
 		name: String,
@@ -38,7 +39,8 @@
 		port: String,
 		username: String,
 		password: String,
-		database: String
+		database: String,
+		colour: String
 	) => {
 		let missingFields = [];
 		if (name.trim() === '') {
@@ -78,7 +80,8 @@
 			Port: port,
 			Username: username,
 			Password: password,
-			Database: database
+			Database: database,
+			Colour: colour
 		});
 		try {
 			// Await the result of the TestConnectPostgres call
@@ -264,6 +267,8 @@
 										id="environment"
 										placeholder="Local / Staging / Production"
 									/>
+									<Label for="colour">Color</Label>
+									<Input bind:value={colour} id="colour" placeholder="color" />
 									<Label for="host">Host</Label>
 									<Input bind:value={host} id="host" placeholder="127.0.0.1" />
 									<Label for="port">Port</Label>
@@ -300,7 +305,8 @@
 												port.trim(),
 												username.trim(),
 												password.trim(),
-												database.trim()
+												database.trim(),
+												colour.trim()
 											)}
 										variant="destructive">Save Connection</Button
 									>
