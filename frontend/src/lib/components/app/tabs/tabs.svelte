@@ -11,8 +11,6 @@
 
 	// Import our custom components
 	import SqlEditor from '$lib/components/app/main_screen/sql_editor.svelte';
-	import SqlEditor2 from '$lib/components/app/main_screen/sql_editor2.svelte';
-	import QueryOutput from '$lib/components/app/main_screen/query_output.svelte';
 	import { model } from '$lib/wailsjs/go/models';
 	import {
 		AddTab,
@@ -222,8 +220,7 @@
 							minSize={10}
 							class="rsz-pane overflow-hidden rounded-md border"
 						>
-							<!-- <SqlEditor id={tabID.toString()} value={editor} /> -->
-							<SqlEditor2 bind:value={editor} {keywords} />
+							<SqlEditor bind:value={editor} {keywords} />
 						</Resizable.ResizablePane>
 
 						<Resizable.ResizableHandle />
