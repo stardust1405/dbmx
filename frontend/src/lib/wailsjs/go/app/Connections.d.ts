@@ -19,6 +19,8 @@ export function GetPostgresServerDatabases(arg1:number,arg2:uuid.UUID,arg3:strin
 
 export function GetSqlite3Version():Promise<string>;
 
-export function TerminatePostgresConnection(arg1:uuid.UUID):Promise<boolean>;
+export function RefreshPostgresDatabase(arg1:number,arg2:string,arg3:string,arg4:string):Promise<model.Database>;
+
+export function TerminatePostgresDatabaseConnection(arg1:string):Promise<boolean>;
 
 export function TestConnectPostgres(arg1:model.PostgresConnection):Promise<boolean>;

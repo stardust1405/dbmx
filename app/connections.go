@@ -134,6 +134,28 @@ func (c *Connections) AddPostgresConnection(p model.PostgresConnection) (bool, e
 	return true, nil
 }
 
+func (c *Connections) RefreshPostgresDatabase(id int64, dbID, dbName, poolID string) (*model.Database, error) {
+	poolIDUUID, err := uuid.Parse(poolID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get all tables
+	tables, err := c.GetAllPostgresTables(poolIDUUID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Database{
+		ID:                   dbID,
+		Name:                 dbName,
+		PostgresConnectionID: id,
+		PoolID:               poolID,
+		IsActive:             true,
+		Tables:               tables,
+	}, nil
+}
+
 func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName string) (*model.Database, error) {
 	// Query for a single row by ID
 	var host, port, username, password string
@@ -294,23 +316,15 @@ func (c *Connections) GetAllPostgresTables(activePoolID uuid.UUID) ([]string, er
 	return tables, nil
 }
 
-func (c *Connections) TerminatePostgresConnection(activePoolID uuid.UUID) (bool, error) {
-	// Start a transaction
-	tx, err := c.DB.Begin()
+func (c *Connections) TerminatePostgresDatabaseConnection(activePoolID string) (bool, error) {
+	activePoolIDUUID, err := uuid.Parse(activePoolID)
 	if err != nil {
 		return false, err
 	}
-
 	// Remove the db pool from active pools
-	err = c.PM.DeletePool(activePoolID)
+	err = c.PM.DeletePool(activePoolIDUUID)
 	if err != nil {
-		tx.Rollback()
 		return false, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		tx.Rollback()
-		return false, errors.Wrap(err, "failed to commit tx")
 	}
 
 	return true, nil

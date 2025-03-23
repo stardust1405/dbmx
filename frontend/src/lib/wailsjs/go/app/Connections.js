@@ -34,8 +34,12 @@ export function GetSqlite3Version() {
   return window['go']['app']['Connections']['GetSqlite3Version']();
 }
 
-export function TerminatePostgresConnection(arg1) {
-  return window['go']['app']['Connections']['TerminatePostgresConnection'](arg1);
+export function RefreshPostgresDatabase(arg1, arg2, arg3, arg4) {
+  return window['go']['app']['Connections']['RefreshPostgresDatabase'](arg1, arg2, arg3, arg4);
+}
+
+export function TerminatePostgresDatabaseConnection(arg1) {
+  return window['go']['app']['Connections']['TerminatePostgresDatabaseConnection'](arg1);
 }
 
 export function TestConnectPostgres(arg1) {

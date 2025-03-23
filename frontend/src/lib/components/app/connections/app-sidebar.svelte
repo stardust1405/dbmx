@@ -14,6 +14,7 @@
 	import SettingsDialog from '$lib/components/settings-dialog.svelte';
 	import { type ComponentProps } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
+	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
@@ -31,7 +32,9 @@
 	import {
 		EstablishPostgresConnection,
 		EstablishPostgresDatabaseConnection,
-		GetPostgresConnections
+		GetPostgresConnections,
+		RefreshPostgresDatabase,
+		TerminatePostgresDatabaseConnection
 	} from '$lib/wailsjs/go/app/Connections';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { toast } from 'svelte-sonner';
@@ -79,20 +82,33 @@
 	let dbLoadingMap = $state<SvelteMap<string, boolean>>(new SvelteMap<string, boolean>());
 
 	function establishDatabaseConnection(id: number, dbID: string) {
-		dbLoadingMap.set(dbID, true);
-
 		let db = databasesMap.get(dbID);
+
+		if (!db) {
+			toast.error('Database not found', {
+				action: {
+					label: 'OK',
+					onClick: () => console.info('OK')
+				}
+			});
+			return;
+		}
+
 		// Check if connection is already established
-		if (db?.IsActive) {
+		if (db.IsActive) {
 			dbLoadingMap.set(dbID, false);
 			return;
 		}
 
+		dbLoadingMap.set(dbID, true);
+
 		// Establish connection
-		EstablishPostgresDatabaseConnection(id, dbID, db?.Name || '')
+		EstablishPostgresDatabaseConnection(id, dbID, db.Name)
 			.then((db) => {
 				dbLoadingMap.set(dbID, false);
 				databasesMap.set(db.ID, db);
+
+				toast.success('Connected to ' + db.Name, {});
 			})
 			.catch((error) => {
 				dbLoadingMap.set(dbID, false);
@@ -120,6 +136,9 @@
 			.then((dbs) => {
 				for (let db of dbs) {
 					databasesMap.set(db.ID, db);
+					if (db.IsActive) {
+						toast.success('Connected to ' + db.Name, {});
+					}
 				}
 				connectionDatabasesMap.set(
 					id,
@@ -147,6 +166,79 @@
 			'bg-emerald-500': 'bg-emerald-500'
 		};
 		return colorMap[color] || '';
+	}
+
+	function terminateDBConnection(dbID: string) {
+		let db = databasesMap.get(dbID);
+
+		if (!db) {
+			toast.error('Database not found', {
+				action: {
+					label: 'OK',
+					onClick: () => console.info('OK')
+				}
+			});
+			return;
+		}
+
+		if (!db.IsActive) {
+			toast.error('Connection is not active', {
+				action: {
+					label: 'OK',
+					onClick: () => console.info('OK')
+				}
+			});
+			return;
+		}
+
+		TerminatePostgresDatabaseConnection(db.PoolID)
+			.then((success) => {
+				if (success) {
+					db.IsActive = false;
+					db.Tables = [];
+					databasesMap.delete(dbID);
+					databasesMap.set(dbID, db);
+
+					toast.success('Disconnected ' + db.Name, {});
+				}
+			})
+			.catch((error) => {
+				toast.error('Failed to disconnect', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
+	}
+
+	function refreshDB(dbID: string) {
+		dbLoadingMap.set(dbID, true);
+
+		let db = databasesMap.get(dbID);
+		if (!db) {
+			dbLoadingMap.set(dbID, false);
+			return;
+		}
+
+		// Establish connection
+		RefreshPostgresDatabase(db.PostgresConnectionID, dbID, db.Name, db.PoolID)
+			.then((db) => {
+				dbLoadingMap.set(dbID, false);
+				databasesMap.set(db.ID, db);
+			})
+			.catch((error) => {
+				dbLoadingMap.set(dbID, false);
+
+				toast.error('Failed to refresh', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
 	}
 </script>
 
@@ -181,23 +273,40 @@
 											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
 											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
 											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
 										{:else if (connectionDatabasesMap.get(connection.ID) || []).length > 0}
 											{#each connectionDatabasesMap.get(connection.ID) || [] as databaseID}
-												<Collapsible.Root>
+												<Collapsible.Root open={databasesMap.get(databaseID)?.IsActive}>
 													<Collapsible.Trigger
 														onclick={() => establishDatabaseConnection(connection.ID, databaseID)}
 													>
-														<Sidebar.MenuButton>
-															<ChevronRight className="transition-transform" />
-															{databasesMap.get(databaseID)?.Name}
-															{#if databasesMap.get(databaseID)?.IsActive}
-																<Activity color="#4fff4d" />
-															{/if}
-														</Sidebar.MenuButton>
+														<ContextMenu.Root>
+															<ContextMenu.Trigger>
+																<Sidebar.MenuButton
+																	class="transform-none select-none transition-none"
+																	aria-disabled={!databasesMap.get(databaseID)?.IsActive}
+																>
+																	<ChevronRight className="transition-transform" />
+																	{databasesMap.get(databaseID)?.Name}
+																	{#if databasesMap.get(databaseID)?.IsActive}
+																		<Activity color="#4fff4d" />
+																	{/if}
+																</Sidebar.MenuButton>
+															</ContextMenu.Trigger>
+															<ContextMenu.Content>
+																<ContextMenu.Item onclick={() => terminateDBConnection(databaseID)}
+																	>Disconnect
+																</ContextMenu.Item>
+																<ContextMenu.Item onclick={() => refreshDB(databaseID)}
+																	>Refresh
+																</ContextMenu.Item>
+															</ContextMenu.Content>
+														</ContextMenu.Root>
 													</Collapsible.Trigger>
 													<Collapsible.Content>
 														<Sidebar.MenuSub>
 															{#if dbLoadingMap.get(databaseID)}
+																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
 																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
 																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
 																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
