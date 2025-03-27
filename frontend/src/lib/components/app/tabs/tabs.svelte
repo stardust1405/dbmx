@@ -9,6 +9,8 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { onMount } from 'svelte';
 
+	import * as Select from '$lib/components/ui/select/index.js';
+
 	// Import our custom components
 	import SqlEditor from '$lib/components/app/main_screen/sql_editor.svelte';
 	import { model } from '$lib/wailsjs/go/models';
@@ -164,6 +166,45 @@
 			activeDB = tab.ActiveDB || '';
 		});
 	}
+
+	const fruits = [
+		{ value: 'apple', label: 'Apple' },
+		{ value: 'banana', label: 'Banana' },
+		{ value: 'blueberry', label: 'Blueberry' },
+		{ value: 'grapes', label: 'Grapes' },
+		{ value: 'pineapple', label: 'Pineapple' }
+	];
+
+	let activeDBs = $state<
+		Array<{
+			dbID: string;
+			dbName: string;
+			poolID: string;
+			color: string;
+			connectionName: string;
+		}>
+	>([
+		{
+			dbID: '1',
+			dbName: 'test',
+			poolID: '1',
+			color: 'red',
+			connectionName: 'test'
+		},
+		{
+			dbID: '2',
+			dbName: 'test2',
+			poolID: '2',
+			color: 'blue',
+			connectionName: 'test2'
+		}
+	]);
+
+	let value = $state(activeDBs[0].dbID);
+
+	const triggerContent = $derived(
+		activeDBs.find((f) => f.dbID === value)?.connectionName ?? 'Select a db'
+	);
 </script>
 
 <Tabs.Root value={tabID.toString()}>
@@ -205,6 +246,20 @@
 				<div class="flex h-full flex-col">
 					<div class="mb-2 flex items-center justify-between">
 						<h2 class="text-lg font-semibold">{tabName}</h2>
+						<Select.Root type="single" name="favoriteFruit" bind:value>
+							<Select.Trigger class="w-[180px]">
+								{triggerContent}
+							</Select.Trigger>
+							<Select.Content>
+								<Select.Group>
+									{#each activeDBs as activeDB}
+										<Select.Item value={activeDB.dbID} label={activeDB.dbName}
+											>{activeDB.connectionName} - {activeDB.dbName}</Select.Item
+										>
+									{/each}
+								</Select.Group>
+							</Select.Content>
+						</Select.Root>
 						<div class="flex gap-2">
 							<Button variant="outline" size="sm" onclick={resetSplitView}>
 								<ArrowsMaximize size={16} class="mr-2" /> Reset Split

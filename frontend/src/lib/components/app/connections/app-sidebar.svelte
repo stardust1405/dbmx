@@ -163,7 +163,13 @@
 		const colorMap: Record<string, string> = {
 			'bg-purple-500': 'bg-purple-500',
 			'bg-indigo-500': 'bg-indigo-500',
-			'bg-emerald-500': 'bg-emerald-500'
+			'bg-emerald-500': 'bg-emerald-500',
+			'bg-red-500': 'bg-red-500',
+			'bg-blue-500': 'bg-blue-500',
+			'bg-green-500': 'bg-green-500',
+			'bg-yellow-500': 'bg-yellow-500',
+			'bg-orange-500': 'bg-orange-500',
+			'bg-pink-500': 'bg-pink-500'
 		};
 		return colorMap[color] || '';
 	}
@@ -261,7 +267,7 @@
 						>
 							<Collapsible.Root>
 								<Collapsible.Trigger onclick={() => establishConnection(connection.ID)}>
-									<Sidebar.MenuButton>
+									<Sidebar.MenuButton class="transform-none select-none transition-none">
 										<ChevronRight className="transition-transform" />
 
 										{connection.Name}
