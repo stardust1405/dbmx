@@ -15,9 +15,11 @@ type PostgresConnection struct {
 }
 
 type Database struct {
-	ID                   string
-	PostgresConnectionID int64
-	Name                 string
+	ID                     string
+	PostgresConnectionID   int64
+	PostgresConnectionName string
+	Name                   string
+	Colour                 string
 
 	// Only set for active connection
 	PoolID   string

@@ -12,7 +12,7 @@
 	import Table2 from 'lucide-svelte/icons/table-2';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import SettingsDialog from '$lib/components/settings-dialog.svelte';
-	import { type ComponentProps } from 'svelte';
+	import { type ComponentProps, getContext } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
 
@@ -28,6 +28,12 @@
 	let databasesMap = $state<SvelteMap<string, model.Database>>(
 		new SvelteMap<string, model.Database>()
 	);
+
+	type AddActiveDBType = (db: model.Database) => void;
+	type RemoveActiveDBType = (dbID: string) => void;
+
+	const addActiveDB = getContext<AddActiveDBType>('addActiveDB');
+	const removeActiveDB = getContext<RemoveActiveDBType>('removeActiveDB');
 
 	import {
 		EstablishPostgresConnection,
@@ -107,6 +113,7 @@
 			.then((db) => {
 				dbLoadingMap.set(dbID, false);
 				databasesMap.set(db.ID, db);
+				addActiveDB(db);
 
 				toast.success('Connected to ' + db.Name, {});
 			})
@@ -137,6 +144,7 @@
 				for (let db of dbs) {
 					databasesMap.set(db.ID, db);
 					if (db.IsActive) {
+						addActiveDB(db);
 						toast.success('Connected to ' + db.Name, {});
 					}
 				}
@@ -204,6 +212,7 @@
 					db.Tables = [];
 					databasesMap.delete(dbID);
 					databasesMap.set(dbID, db);
+					removeActiveDB(dbID);
 
 					toast.success('Disconnected ' + db.Name, {});
 				}

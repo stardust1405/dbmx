@@ -7,7 +7,7 @@
 	import ArrowsMaximize from 'lucide-svelte/icons/maximize-2';
 	import * as Resizable from '$lib/components/ui/resizable/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { onMount } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 
 	import * as Select from '$lib/components/ui/select/index.js';
 
@@ -167,43 +167,24 @@
 		});
 	}
 
-	const fruits = [
-		{ value: 'apple', label: 'Apple' },
-		{ value: 'banana', label: 'Banana' },
-		{ value: 'blueberry', label: 'Blueberry' },
-		{ value: 'grapes', label: 'Grapes' },
-		{ value: 'pineapple', label: 'Pineapple' }
-	];
+	let activeDBs = $state<Array<model.Database>>([]);
 
-	let activeDBs = $state<
-		Array<{
-			dbID: string;
-			dbName: string;
-			poolID: string;
-			color: string;
-			connectionName: string;
-		}>
-	>([
-		{
-			dbID: '1',
-			dbName: 'test',
-			poolID: '1',
-			color: 'red',
-			connectionName: 'test'
-		},
-		{
-			dbID: '2',
-			dbName: 'test2',
-			poolID: '2',
-			color: 'blue',
-			connectionName: 'test2'
-		}
-	]);
+	// Handle DB selection
+	function addActiveDB(db: model.Database) {
+		activeDBs.push(db);
+	}
 
-	let value = $state(activeDBs[0].dbID);
+	function removeActiveDB(dbID: string) {
+		activeDBs = activeDBs.filter((db) => db.ID !== dbID);
+	}
+
+	setContext('addActiveDB', addActiveDB);
+	setContext('removeActiveDB', removeActiveDB);
+
+	let selectedDB = $state('');
 
 	const triggerContent = $derived(
-		activeDBs.find((f) => f.dbID === value)?.connectionName ?? 'Select a db'
+		activeDBs.find((f) => f.ID === selectedDB)?.Name ?? 'Connect to a database'
 	);
 </script>
 
@@ -246,15 +227,15 @@
 				<div class="flex h-full flex-col">
 					<div class="mb-2 flex items-center justify-between">
 						<h2 class="text-lg font-semibold">{tabName}</h2>
-						<Select.Root type="single" name="favoriteFruit" bind:value>
+						<Select.Root type="single" name="favoriteFruit" bind:value={selectedDB}>
 							<Select.Trigger class="w-[180px]">
 								{triggerContent}
 							</Select.Trigger>
 							<Select.Content>
 								<Select.Group>
 									{#each activeDBs as activeDB}
-										<Select.Item value={activeDB.dbID} label={activeDB.dbName}
-											>{activeDB.connectionName} - {activeDB.dbName}</Select.Item
+										<Select.Item value={activeDB.ID} label={activeDB.Name}
+											>{activeDB.PostgresConnectionName} - {activeDB.Name}</Select.Item
 										>
 									{/each}
 								</Select.Group>

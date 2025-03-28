@@ -3,7 +3,9 @@ export namespace model {
 	export class Database {
 	    ID: string;
 	    PostgresConnectionID: number;
+	    PostgresConnectionName: string;
 	    Name: string;
+	    Colour: string;
 	    PoolID: string;
 	    IsActive: boolean;
 	    Tables: string[];
@@ -16,7 +18,9 @@ export namespace model {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ID = source["ID"];
 	        this.PostgresConnectionID = source["PostgresConnectionID"];
+	        this.PostgresConnectionName = source["PostgresConnectionName"];
 	        this.Name = source["Name"];
+	        this.Colour = source["Colour"];
 	        this.PoolID = source["PoolID"];
 	        this.IsActive = source["IsActive"];
 	        this.Tables = source["Tables"];
