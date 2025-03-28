@@ -26,8 +26,8 @@ export function GetPostgresConnections() {
   return window['go']['app']['Connections']['GetPostgresConnections']();
 }
 
-export function GetPostgresServerDatabases(arg1, arg2, arg3) {
-  return window['go']['app']['Connections']['GetPostgresServerDatabases'](arg1, arg2, arg3);
+export function GetPostgresServerDatabases(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['app']['Connections']['GetPostgresServerDatabases'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function GetSqlite3Version() {

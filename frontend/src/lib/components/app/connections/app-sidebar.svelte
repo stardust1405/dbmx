@@ -29,12 +29,6 @@
 		new SvelteMap<string, model.Database>()
 	);
 
-	type AddActiveDBType = (db: model.Database) => void;
-	type RemoveActiveDBType = (dbID: string) => void;
-
-	const addActiveDB = getContext<AddActiveDBType>('addActiveDB');
-	const removeActiveDB = getContext<RemoveActiveDBType>('removeActiveDB');
-
 	import {
 		EstablishPostgresConnection,
 		EstablishPostgresDatabaseConnection,
@@ -45,6 +39,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { toast } from 'svelte-sonner';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import { activeDBs, addActiveDB, removeActiveDB } from '$lib/components/app/tabs/tabs.svelte.ts';
 
 	onMount(() => {
 		GetPostgresConnections()

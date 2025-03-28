@@ -7,7 +7,7 @@
 	import ArrowsMaximize from 'lucide-svelte/icons/maximize-2';
 	import * as Resizable from '$lib/components/ui/resizable/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { onMount, setContext } from 'svelte';
+	import { onMount } from 'svelte';
 
 	import * as Select from '$lib/components/ui/select/index.js';
 
@@ -22,6 +22,7 @@
 		UpdateTabEditorContent
 	} from '$lib/wailsjs/go/app/Tabs';
 	import { SvelteMap } from 'svelte/reactivity';
+	import { activeDBs } from './tabs.svelte.ts';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
@@ -167,25 +168,31 @@
 		});
 	}
 
-	let activeDBs = $state<Array<model.Database>>([]);
-
-	// Handle DB selection
-	function addActiveDB(db: model.Database) {
-		activeDBs.push(db);
-	}
-
-	function removeActiveDB(dbID: string) {
-		activeDBs = activeDBs.filter((db) => db.ID !== dbID);
-	}
-
-	setContext('addActiveDB', addActiveDB);
-	setContext('removeActiveDB', removeActiveDB);
-
 	let selectedDB = $state('');
+	let selectedDBDisplay = $state('Connect to a database');
+	let currentColor = $state('');
 
-	const triggerContent = $derived(
-		activeDBs.find((f) => f.ID === selectedDB)?.Name ?? 'Connect to a database'
-	);
+	$effect(() => {
+		if (activeDBs.length == 0) {
+			selectedDBDisplay = 'Connect to a database';
+			currentColor = '';
+		}
+	});
+
+	function getColorClass(color: string): string {
+		const colorMap: Record<string, string> = {
+			'bg-purple-500': 'bg-purple-500',
+			'bg-indigo-500': 'bg-indigo-500',
+			'bg-emerald-500': 'bg-emerald-500',
+			'bg-red-500': 'bg-red-500',
+			'bg-blue-500': 'bg-blue-500',
+			'bg-green-500': 'bg-green-500',
+			'bg-yellow-500': 'bg-yellow-500',
+			'bg-orange-500': 'bg-orange-500',
+			'bg-pink-500': 'bg-pink-500'
+		};
+		return colorMap[color] || '';
+	}
 </script>
 
 <Tabs.Root value={tabID.toString()}>
@@ -228,13 +235,22 @@
 					<div class="mb-2 flex items-center justify-between">
 						<h2 class="text-lg font-semibold">{tabName}</h2>
 						<Select.Root type="single" name="favoriteFruit" bind:value={selectedDB}>
-							<Select.Trigger class="w-[180px]">
-								{triggerContent}
+							<Select.Trigger
+								class="{getColorClass(currentColor)} w-[180px] bg-opacity-20 hover:bg-opacity-25"
+							>
+								{selectedDBDisplay}
 							</Select.Trigger>
 							<Select.Content>
 								<Select.Group>
 									{#each activeDBs as activeDB}
-										<Select.Item value={activeDB.ID} label={activeDB.Name}
+										<Select.Item
+											onclick={() => {
+												currentColor = activeDB.Colour;
+												selectedDBDisplay = activeDB.PostgresConnectionName + ' - ' + activeDB.Name;
+											}}
+											class="{getColorClass(activeDB.Colour)} bg-opacity-20 hover:bg-opacity-25"
+											value={activeDB.ID}
+											label={activeDB.Name}
 											>{activeDB.PostgresConnectionName} - {activeDB.Name}</Select.Item
 										>
 									{/each}

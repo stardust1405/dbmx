@@ -158,11 +158,11 @@ func (c *Connections) RefreshPostgresDatabase(id int64, dbID, dbName, poolID str
 
 func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName string) (*model.Database, error) {
 	// Query for a single row by ID
-	var host, port, username, password string
-	row := c.DB.QueryRow("SELECT host, port, username, password FROM postgres WHERE id = ?", id)
+	var name, host, port, username, password, colour string
+	row := c.DB.QueryRow("SELECT name, host, port, username, password, colour FROM postgres WHERE id = ?", id)
 
 	// Scan the result into variables
-	err := row.Scan(&host, &port, &username, &password)
+	err := row.Scan(&name, &host, &port, &username, &password, &colour)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.Wrap(err, "postgres server not found")
@@ -189,22 +189,24 @@ func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName
 	}
 
 	return &model.Database{
-		ID:                   dbID,
-		Name:                 dbName,
-		PostgresConnectionID: id,
-		PoolID:               activePoolID.String(),
-		IsActive:             true,
-		Tables:               tables,
+		ID:                     dbID,
+		Name:                   dbName,
+		PostgresConnectionID:   id,
+		PostgresConnectionName: name,
+		Colour:                 colour,
+		PoolID:                 activePoolID.String(),
+		IsActive:               true,
+		Tables:                 tables,
 	}, nil
 }
 
 func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, error) {
 	// Query for a single row by ID
-	var host, port, username, password, database string
-	row := c.DB.QueryRow("SELECT host, port, username, password, database FROM postgres WHERE id = ?", id)
+	var name, host, port, username, password, database, colour string
+	row := c.DB.QueryRow("SELECT name, host, port, username, password, database, colour FROM postgres WHERE id = ?", id)
 
 	// Scan the result into variables
-	err := row.Scan(&host, &port, &username, &password, &database)
+	err := row.Scan(&name, &host, &port, &username, &password, &database, &colour)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.Wrap(err, "postgres server not found")
@@ -230,11 +232,11 @@ func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, e
 		return nil, err
 	}
 
-	return c.GetPostgresServerDatabases(id, activePoolID, database)
+	return c.GetPostgresServerDatabases(id, activePoolID, database, name, colour)
 }
 
 // Here, pool means the active connection to the database server
-func (c *Connections) GetPostgresServerDatabases(postgresConnectionID int64, activePoolID uuid.UUID, activeDatabase string) ([]model.Database, error) {
+func (c *Connections) GetPostgresServerDatabases(postgresConnectionID int64, activePoolID uuid.UUID, activeDatabase, postgresConnectionName, colour string) ([]model.Database, error) {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
 		return nil, errors.New("pool doesn't exist")
@@ -265,6 +267,8 @@ func (c *Connections) GetPostgresServerDatabases(postgresConnectionID int64, act
 		}
 		database.ID = "db_" + uuid.New().String()
 		database.PostgresConnectionID = postgresConnectionID
+		database.PostgresConnectionName = postgresConnectionName
+		database.Colour = colour
 		if database.Name == activeDatabase {
 			database.PoolID = activePoolID.String()
 			database.IsActive = true

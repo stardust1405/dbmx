@@ -15,7 +15,7 @@ export function GetAllPostgresTables(arg1:uuid.UUID):Promise<Array<string>>;
 
 export function GetPostgresConnections():Promise<Array<model.PostgresConnection>>;
 
-export function GetPostgresServerDatabases(arg1:number,arg2:uuid.UUID,arg3:string):Promise<Array<model.Database>>;
+export function GetPostgresServerDatabases(arg1:number,arg2:uuid.UUID,arg3:string,arg4:string,arg5:string):Promise<Array<model.Database>>;
 
 export function GetSqlite3Version():Promise<string>;
 
