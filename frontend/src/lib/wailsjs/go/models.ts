@@ -33,6 +33,8 @@ export namespace model {
 	    data: any[];
 	    rowsAffected: number;
 	    message: string;
+	    columns: string[];
+	    rows: any[][];
 	
 	    static createFrom(source: any = {}) {
 	        return new GenericResponse(source);
@@ -44,6 +46,8 @@ export namespace model {
 	        this.data = source["data"];
 	        this.rowsAffected = source["rowsAffected"];
 	        this.message = source["message"];
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
 	    }
 	}
 	export class PostgresConnection {

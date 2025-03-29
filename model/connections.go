@@ -33,4 +33,6 @@ type GenericResponse struct {
 	Data         []interface{} `json:"data"`
 	RowsAffected int64         `json:"rowsAffected"`
 	Message      string        `json:"message"`
+	Columns      []string      `json:"columns"`
+	Rows         [][]any       `json:"rows"`
 }

@@ -49,7 +49,7 @@
 	let tabID = $state(0);
 	let tabName = $state('');
 	let editor = $state('');
-	let output = $state('');
+	let output = $state<string[]>([]);
 
 	onMount(() => {
 		getAllTabs();
@@ -87,7 +87,6 @@
 					tabID = tab.ID;
 					tabName = tab.Name;
 					editor = tab.Editor;
-					output = tab.Output;
 				}
 			}
 		});
@@ -110,7 +109,6 @@
 			tabID = tab.ID;
 			tabName = tab.Name;
 			editor = tab.Editor;
-			output = tab.Output;
 		});
 	}
 
@@ -123,7 +121,6 @@
 				tabID = tab.ID;
 				tabName = tab.Name;
 				editor = tab.Editor;
-				output = tab.Output;
 			}
 		});
 		console.log(tabsMap);
@@ -136,7 +133,6 @@
 			tabID = tab.ID;
 			tabName = tab.Name;
 			editor = tab.Editor;
-			output = tab.Output;
 		});
 	}
 
@@ -166,7 +162,51 @@
 		return colorMap[color] || '';
 	}
 
+	import { toast } from 'svelte-sonner';
+	import { ExecuteQuery } from '$lib/wailsjs/go/app/Connections.js';
+
 	let selectedText = $state('');
+
+	let columns = $state<string[]>([]);
+	let rows = $state<string[][]>([]);
+
+	function executeQuery() {
+		if (selectedText.trim() == '') {
+			toast.error('Please select a query to execute', {
+				action: {
+					label: 'OK',
+					onClick: () => console.info('OK')
+				}
+			});
+			return;
+		}
+		if (activePoolID == '') {
+			toast.error('Please select a database to execute the query', {
+				action: {
+					label: 'OK',
+					onClick: () => console.info('OK')
+				}
+			});
+			return;
+		}
+		// Execute query
+		ExecuteQuery(activePoolID, selectedText)
+			.then((result) => {
+				// Update tab output
+				columns = result.columns;
+				rows = result.rows;
+			})
+			.catch((error) => {
+				// Handle errors from the ExecuteQuery call
+				toast.error('Query Failed', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
+	}
 </script>
 
 <Tabs.Root value={tabID.toString()}>
@@ -236,7 +276,7 @@
 							<Button variant="outline" size="sm" onclick={resetSplitView}>
 								<ArrowsMaximize size={16} class="mr-2" /> Reset Split
 							</Button>
-							<Button variant="default" size="sm">Execute Query</Button>
+							<Button variant="default" size="sm" onclick={executeQuery}>Execute Query</Button>
 						</div>
 					</div>
 
@@ -258,9 +298,14 @@
 							minSize={10}
 							class="rsz-pane overflow-auto"
 						>
-							<h1>{output}</h1>
-							<h1>{selectedText}</h1>
-							<!-- <QueryOutput outputs={outputContent} /> -->
+							{#each columns as column}
+								{column} |
+							{/each}
+							{#each rows as row}
+								{#each row as cell}
+									{cell} |
+								{/each}
+							{/each}
 						</Resizable.ResizablePane>
 					</Resizable.ResizablePaneGroup>
 				</div>

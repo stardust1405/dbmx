@@ -391,7 +391,7 @@ func (c *Connections) TerminatePostgresDatabaseConnection(activePoolID string) (
 	return true, nil
 }
 
-func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, args ...interface{}) *model.GenericResponse {
+func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string) *model.GenericResponse {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
 		return errorResponse(errors.New("pool doesn't exist"))
@@ -407,7 +407,7 @@ func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, args ..
 
 	if isReadOperation {
 		// Use Query for read operations
-		rows, err := pool.Query(ctx, query, args...)
+		rows, err := pool.Query(ctx, query)
 		if err != nil {
 			return errorResponse(err)
 		}
@@ -419,32 +419,37 @@ func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, args ..
 			columnNames[i] = string(col.Name)
 		}
 
+		var result [][]any
+
 		for rows.Next() {
 			values, err := rows.Values()
 			if err != nil {
 				return errorResponse(err)
 			}
 
-			rowData := make(map[string]interface{})
+			rowData := make([]any, len(values))
 			for i, val := range values {
 				switch v := val.(type) {
 				case []byte:
-					rowData[columnNames[i]] = string(v)
+					rowData[i] = string(v)
 				case time.Time:
-					rowData[columnNames[i]] = v.Format(time.RFC3339)
+					rowData[i] = v.Format(time.RFC3339)
 				default:
-					rowData[columnNames[i]] = val
+					rowData[i] = val
 				}
 			}
-			response.Data = append(response.Data, rowData)
+			result = append(result, rowData)
 		}
 
 		if err := rows.Err(); err != nil {
 			return errorResponse(err)
 		}
+
+		response.Columns = columnNames
+		response.Rows = result
 	} else {
 		// Use Exec for write operations
-		tag, err := pool.Exec(ctx, query, args...)
+		tag, err := pool.Exec(ctx, query)
 		if err != nil {
 			return errorResponse(err)
 		}
@@ -460,21 +465,3 @@ func errorResponse(err error) *model.GenericResponse {
 		Message: err.Error(),
 	}
 }
-
-// func (gr *model.GenericResponse) PrettyPrint() {
-// 	if gr.OK {
-// 		if len(gr.Data) > 0 {
-// 			fmt.Println("Query Results:")
-// 			for i, row := range gr.Data {
-// 				jsonData, _ := json.MarshalIndent(row, "  ", "  ")
-// 				fmt.Printf("Row %d:\n%s\n", i+1, jsonData)
-// 			}
-// 		} else if gr.RowsAffected > 0 {
-// 			fmt.Printf("Success. Rows affected: %d\n", gr.RowsAffected)
-// 		} else {
-// 			fmt.Println("Operation completed (no results)")
-// 		}
-// 	} else {
-// 		fmt.Printf("Error: %s\n", gr.Message)
-// 	}
-// }
