@@ -203,11 +203,11 @@
 		TerminatePostgresDatabaseConnection(db.PoolID)
 			.then((success) => {
 				if (success) {
+					removeActiveDB(dbID, db.Tables);
 					db.IsActive = false;
 					db.Tables = [];
 					databasesMap.delete(dbID);
 					databasesMap.set(dbID, db);
-					removeActiveDB(dbID);
 
 					toast.success('Disconnected ' + db.Name, {});
 				}

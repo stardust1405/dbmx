@@ -7,7 +7,13 @@
 	let completionProviderDisposable: import('monaco-editor').IDisposable;
 	let isInitialized = false;
 
-	let { value = $bindable(), height = '100%', width = '100%', keywords = [] } = $props();
+	let {
+		value = $bindable(),
+		selectedText = $bindable(),
+		height = '100%',
+		width = '100%',
+		suggestions = []
+	} = $props();
 
 	// This effect will run whenever the value changes from outside
 	$effect(() => {
@@ -36,15 +42,13 @@
 					return { suggestions: [] };
 				}
 
-				const sqlKeywords = keywords;
-
 				const prefix = word.word.toLowerCase();
-				const suggestions = sqlKeywords.filter((keyword) =>
+				const filteredSuggestions = suggestions.filter((keyword) =>
 					keyword.toLowerCase().startsWith(prefix)
 				);
 
 				return {
-					suggestions: suggestions.map((keyword) => ({
+					suggestions: filteredSuggestions.map((keyword) => ({
 						label: keyword,
 						kind: monaco.languages.CompletionItemKind.Keyword,
 						insertText: keyword,
@@ -90,6 +94,19 @@
 		editor?.dispose();
 		completionProviderDisposable?.dispose();
 	});
+
+	// Function to update the state with the selected text
+	function handleSelection() {
+		const selection = window.getSelection();
+		if (selection) {
+			selectedText = selection.toString();
+		}
+	}
 </script>
 
-<div bind:this={editorContainer} class="sql-editor" style="height: {height}; width: {width};"></div>
+<div
+	onselect={handleSelection}
+	bind:this={editorContainer}
+	class="sql-editor"
+	style="height: {height}; width: {width};"
+></div>

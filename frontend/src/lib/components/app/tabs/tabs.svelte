@@ -22,28 +22,10 @@
 		UpdateTabEditorContent
 	} from '$lib/wailsjs/go/app/Tabs';
 	import { SvelteMap } from 'svelte/reactivity';
-	import { activeDBs } from './tabs.svelte.ts';
+	import { activeDBs, suggestions } from './tabs.svelte.ts';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
-	let keywords = $state([
-		'SELECT',
-		'FROM',
-		'WHERE',
-		'INNER',
-		'LEFT',
-		'RIGHT',
-		'JOIN',
-		'AND',
-		'OR',
-		'NOT',
-		'IN',
-		'LIKE',
-		'BETWEEN',
-		'ORDER BY',
-		'LIMIT',
-		'location_wise_inventory'
-	]);
 
 	function resetSplitView() {
 		// Force a reset of the pane sizes
@@ -66,10 +48,8 @@
 	// Active tab properties
 	let tabID = $state(0);
 	let tabName = $state('');
-	let editor = $state('select * from');
+	let editor = $state('');
 	let output = $state('');
-	let activeDBID = $state(0);
-	let activeDB = $state('');
 
 	onMount(() => {
 		getAllTabs();
@@ -108,8 +88,6 @@
 					tabName = tab.Name;
 					editor = tab.Editor;
 					output = tab.Output;
-					activeDBID = tab.ActiveDBID || 0;
-					activeDB = tab.ActiveDB || '';
 				}
 			}
 		});
@@ -133,8 +111,6 @@
 			tabName = tab.Name;
 			editor = tab.Editor;
 			output = tab.Output;
-			activeDBID = tab.ActiveDBID || 0;
-			activeDB = tab.ActiveDB || '';
 		});
 	}
 
@@ -148,8 +124,6 @@
 				tabName = tab.Name;
 				editor = tab.Editor;
 				output = tab.Output;
-				activeDBID = tab.ActiveDBID || 0;
-				activeDB = tab.ActiveDB || '';
 			}
 		});
 		console.log(tabsMap);
@@ -163,14 +137,12 @@
 			tabName = tab.Name;
 			editor = tab.Editor;
 			output = tab.Output;
-			activeDBID = tab.ActiveDBID || 0;
-			activeDB = tab.ActiveDB || '';
 		});
 	}
 
-	let selectedDB = $state('');
 	let selectedDBDisplay = $state('Connect to a database');
 	let currentColor = $state('');
+	let activePoolID = $state('');
 
 	$effect(() => {
 		if (activeDBs.length == 0) {
@@ -193,6 +165,8 @@
 		};
 		return colorMap[color] || '';
 	}
+
+	let selectedText = $state('');
 </script>
 
 <Tabs.Root value={tabID.toString()}>
@@ -234,7 +208,7 @@
 				<div class="flex h-full flex-col">
 					<div class="mb-2 flex items-center justify-between">
 						<h2 class="text-lg font-semibold">{tabName}</h2>
-						<Select.Root type="single" name="favoriteFruit" bind:value={selectedDB}>
+						<Select.Root type="single" name="activeDatabase">
 							<Select.Trigger
 								class="{getColorClass(currentColor)} w-[180px] bg-opacity-20 hover:bg-opacity-25"
 							>
@@ -245,6 +219,7 @@
 									{#each activeDBs as activeDB}
 										<Select.Item
 											onclick={() => {
+												activePoolID = activeDB.PoolID;
 												currentColor = activeDB.Colour;
 												selectedDBDisplay = activeDB.PostgresConnectionName + ' - ' + activeDB.Name;
 											}}
@@ -272,7 +247,7 @@
 							minSize={10}
 							class="rsz-pane overflow-hidden rounded-md border"
 						>
-							<SqlEditor bind:value={editor} {keywords} />
+							<SqlEditor bind:value={editor} bind:selectedText {suggestions} />
 						</Resizable.ResizablePane>
 
 						<Resizable.ResizableHandle />
@@ -284,6 +259,7 @@
 							class="rsz-pane overflow-auto"
 						>
 							<h1>{output}</h1>
+							<h1>{selectedText}</h1>
 							<!-- <QueryOutput outputs={outputContent} /> -->
 						</Resizable.ResizablePane>
 					</Resizable.ResizablePaneGroup>
