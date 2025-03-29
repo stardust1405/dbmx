@@ -188,6 +188,12 @@ func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName
 		return nil, err
 	}
 
+	// Get all columns
+	columns, err := c.GetAllDatabaseColumns(activePoolID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &model.Database{
 		ID:                     dbID,
 		Name:                   dbName,
@@ -197,6 +203,7 @@ func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName
 		PoolID:                 activePoolID.String(),
 		IsActive:               true,
 		Tables:                 tables,
+		Columns:                columns,
 	}, nil
 }
 
@@ -248,6 +255,12 @@ func (c *Connections) GetPostgresServerDatabases(postgresConnectionID int64, act
 		return nil, err
 	}
 
+	// Get Columns of active database
+	columns, err := c.GetAllDatabaseColumns(activePoolID)
+	if err != nil {
+		return nil, err
+	}
+
 	// Get all database names of the active connection
 	rows, err := pool.Query(context.TODO(), "SELECT datname FROM pg_database")
 	if err != nil {
@@ -273,6 +286,7 @@ func (c *Connections) GetPostgresServerDatabases(postgresConnectionID int64, act
 			database.PoolID = activePoolID.String()
 			database.IsActive = true
 			database.Tables = tables
+			database.Columns = columns
 		}
 
 		databases = append(databases, database)
@@ -318,6 +332,49 @@ func (c *Connections) GetAllPostgresTables(activePoolID uuid.UUID) ([]string, er
 	}
 
 	return tables, nil
+}
+
+// Get all columns of the active database across all tables
+func (c *Connections) GetAllDatabaseColumns(activePoolID uuid.UUID) ([]string, error) {
+	pool, exists := c.PM.GetPool(activePoolID)
+	if !exists {
+		return nil, errors.New("pool doesn't exist")
+	}
+
+	// Get all columns
+	query := `
+		SELECT DISTINCT
+			column_name
+		FROM
+			information_schema.columns
+		WHERE
+			table_schema NOT IN ('information_schema', 'pg_catalog')
+	`
+	rows, err := pool.Query(context.TODO(), query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	// Slice to hold results
+	var columns []string
+
+	// Iterate through the rows
+	for rows.Next() {
+		var column string
+		err := rows.Scan(&column)
+		if err != nil {
+			return nil, err
+		}
+		columns = append(columns, column)
+	}
+
+	// Check for any error encountered during iteration
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return columns, nil
 }
 
 func (c *Connections) TerminatePostgresDatabaseConnection(activePoolID string) (bool, error) {

@@ -18,6 +18,10 @@ export function ExecuteQuery(arg1, arg2, arg3) {
   return window['go']['app']['Connections']['ExecuteQuery'](arg1, arg2, arg3);
 }
 
+export function GetAllDatabaseColumns(arg1) {
+  return window['go']['app']['Connections']['GetAllDatabaseColumns'](arg1);
+}
+
 export function GetAllPostgresTables(arg1) {
   return window['go']['app']['Connections']['GetAllPostgresTables'](arg1);
 }

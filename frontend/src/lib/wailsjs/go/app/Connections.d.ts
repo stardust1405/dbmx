@@ -11,6 +11,8 @@ export function EstablishPostgresDatabaseConnection(arg1:number,arg2:string,arg3
 
 export function ExecuteQuery(arg1:uuid.UUID,arg2:string,arg3:Array<any>):Promise<model.GenericResponse>;
 
+export function GetAllDatabaseColumns(arg1:uuid.UUID):Promise<Array<string>>;
+
 export function GetAllPostgresTables(arg1:uuid.UUID):Promise<Array<string>>;
 
 export function GetPostgresConnections():Promise<Array<model.PostgresConnection>>;

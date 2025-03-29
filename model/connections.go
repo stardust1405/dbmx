@@ -25,6 +25,7 @@ type Database struct {
 	PoolID   string
 	IsActive bool
 	Tables   []string
+	Columns  []string
 }
 
 type GenericResponse struct {

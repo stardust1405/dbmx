@@ -17,16 +17,21 @@ export let suggestions = $state<Array<string>>([
     'LIKE',
     'BETWEEN',
     'ORDER BY',
-    'LIMIT'
+    'LIMIT',
+    'IS',
+    'true',
+    'false',
+    'NULL'
 ]);
 
 // Handle DB selection
 export function addActiveDB(db: model.Database) {
     activeDBs.push(db); // Directly mutate the array
     suggestions.push(...db.Tables);
+    suggestions.push(...db.Columns);
 }
 
-export function removeActiveDB(dbID: string, tables: Array<string>) {
+export function removeActiveDB(dbID: string, tables: Array<string>, columns: Array<string>) {
     activeDBs.splice(
         activeDBs.findIndex((db) => db.ID === dbID),
         1
@@ -34,5 +39,9 @@ export function removeActiveDB(dbID: string, tables: Array<string>) {
     suggestions.splice(
         suggestions.findIndex((table) => tables.includes(table)),
         tables.length
+    );
+    suggestions.splice(
+        suggestions.findIndex((column) => columns.includes(column)),
+        columns.length
     );
 }

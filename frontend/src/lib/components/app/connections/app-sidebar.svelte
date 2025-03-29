@@ -203,9 +203,10 @@
 		TerminatePostgresDatabaseConnection(db.PoolID)
 			.then((success) => {
 				if (success) {
-					removeActiveDB(dbID, db.Tables);
+					removeActiveDB(dbID, db.Tables, db.Columns);
 					db.IsActive = false;
 					db.Tables = [];
+					db.Columns = [];
 					databasesMap.delete(dbID);
 					databasesMap.set(dbID, db);
 

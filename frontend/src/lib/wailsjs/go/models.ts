@@ -9,6 +9,7 @@ export namespace model {
 	    PoolID: string;
 	    IsActive: boolean;
 	    Tables: string[];
+	    Columns: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Database(source);
@@ -24,6 +25,7 @@ export namespace model {
 	        this.PoolID = source["PoolID"];
 	        this.IsActive = source["IsActive"];
 	        this.Tables = source["Tables"];
+	        this.Columns = source["Columns"];
 	    }
 	}
 	export class GenericResponse {
