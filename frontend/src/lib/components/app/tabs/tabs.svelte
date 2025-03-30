@@ -49,7 +49,6 @@
 	let tabID = $state(0);
 	let tabName = $state('');
 	let editor = $state('');
-	let output = $state<string[]>([]);
 
 	onMount(() => {
 		getAllTabs();
@@ -140,13 +139,6 @@
 	let currentColor = $state('');
 	let activePoolID = $state('');
 
-	$effect(() => {
-		if (activeDBs.length == 0) {
-			selectedDBDisplay = 'Connect to a database';
-			currentColor = '';
-		}
-	});
-
 	function getColorClass(color: string): string {
 		const colorMap: Record<string, string> = {
 			'bg-purple-500': 'bg-purple-500',
@@ -167,8 +159,14 @@
 
 	let selectedText = $state('');
 
-	let columns = $state<string[]>([]);
-	let rows = $state<string[][]>([]);
+	// Table
+	import type { ColumnDef, RowData } from '@tanstack/table-core';
+
+	import DataTable from './data-table.svelte';
+
+	let columns = $state<ColumnDef<RowData, unknown>[]>([]);
+
+	let rows = $state<RowData[]>([]);
 
 	function executeQuery() {
 		if (selectedText.trim() == '') {
@@ -192,9 +190,34 @@
 		// Execute query
 		ExecuteQuery(activePoolID, selectedText)
 			.then((result) => {
-				// Update tab output
-				columns = result.columns;
-				rows = result.rows;
+				if (!result.ok) {
+					toast.error('Query Failed', {
+						description: result.message,
+						action: {
+							label: 'OK',
+							onClick: () => console.info('OK')
+						}
+					});
+					return;
+				}
+
+				// Update columns
+				for (const column of result.columns) {
+					columns.push({
+						accessorKey: column,
+						header: column
+					});
+				}
+
+				for (const row of result.rows) {
+					let cell: Record<string, any> = {};
+					for (const resultCell of row) {
+						if (resultCell.column && resultCell.value) {
+							cell[resultCell.column] = resultCell.value;
+						}
+					}
+					rows.push(cell);
+				}
 			})
 			.catch((error) => {
 				// Handle errors from the ExecuteQuery call
@@ -206,7 +229,25 @@
 					}
 				});
 			});
+
+		columns.splice(0, columns.length);
+		rows.splice(0, rows.length);
 	}
+
+	function handleKeyDown(event: KeyboardEvent) {
+		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+			executeQuery();
+		}
+	}
+
+	document.addEventListener('keydown', handleKeyDown);
+
+	$effect(() => {
+		if (activeDBs.length == 0) {
+			selectedDBDisplay = 'Connect to a database';
+			currentColor = '';
+		}
+	});
 </script>
 
 <Tabs.Root value={tabID.toString()}>
@@ -298,14 +339,11 @@
 							minSize={10}
 							class="rsz-pane overflow-auto"
 						>
-							{#each columns as column}
-								{column} |
-							{/each}
-							{#each rows as row}
-								{#each row as cell}
-									{cell} |
-								{/each}
-							{/each}
+							<div class="h-full overflow-auto">
+								{#if columns.length > 0}
+									<DataTable data={rows} {columns} />
+								{/if}
+							</div>
 						</Resizable.ResizablePane>
 					</Resizable.ResizablePaneGroup>
 				</div>

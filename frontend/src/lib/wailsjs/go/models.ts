@@ -1,5 +1,19 @@
 export namespace model {
 	
+	export class Cell {
+	    column: string;
+	    value: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Cell(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.column = source["column"];
+	        this.value = source["value"];
+	    }
+	}
 	export class Database {
 	    ID: string;
 	    PostgresConnectionID: number;
@@ -26,28 +40,6 @@ export namespace model {
 	        this.IsActive = source["IsActive"];
 	        this.Tables = source["Tables"];
 	        this.Columns = source["Columns"];
-	    }
-	}
-	export class GenericResponse {
-	    ok: boolean;
-	    data: any[];
-	    rowsAffected: number;
-	    message: string;
-	    columns: string[];
-	    rows: any[][];
-	
-	    static createFrom(source: any = {}) {
-	        return new GenericResponse(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.ok = source["ok"];
-	        this.data = source["data"];
-	        this.rowsAffected = source["rowsAffected"];
-	        this.message = source["message"];
-	        this.columns = source["columns"];
-	        this.rows = source["rows"];
 	    }
 	}
 	export class PostgresConnection {
@@ -79,6 +71,44 @@ export namespace model {
 	        this.Colour = source["Colour"];
 	        this.IsActive = source["IsActive"];
 	    }
+	}
+	export class QueryResult {
+	    ok: boolean;
+	    columns: string[];
+	    rows: Cell[][];
+	    rowsAffected: number;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new QueryResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.columns = source["columns"];
+	        this.rows = this.convertValues(source["rows"], Cell);
+	        this.rowsAffected = source["rowsAffected"];
+	        this.message = source["message"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class Tab {
 	    ID: number;

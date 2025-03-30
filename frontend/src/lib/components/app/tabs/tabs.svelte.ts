@@ -21,7 +21,12 @@ export let suggestions = $state<Array<string>>([
     'IS',
     'true',
     'false',
-    'NULL'
+    'NULL',
+    'COUNT()',
+    'SUM()',
+    'AVG()',
+    'MAX()',
+    'MIN()'
 ]);
 
 // Handle DB selection

@@ -391,77 +391,93 @@ func (c *Connections) TerminatePostgresDatabaseConnection(activePoolID string) (
 	return true, nil
 }
 
-func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string) *model.GenericResponse {
+// Function to check if a query is a write operation
+func isWriteOperation(query string) bool {
+	// List of SQL keywords for write operations in lowercase
+	writeKeywords := []string{"insert", "update", "delete", "alter", "create", "drop", "truncate"}
+
+	// Convert query to lowercase for case-insensitive comparison
+	query = strings.ToLower(strings.TrimSpace(query))
+
+	// Check if the query starts with any write keyword
+	for _, keyword := range writeKeywords {
+		if strings.HasPrefix(query, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string) *model.QueryResult {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
-		return errorResponse(errors.New("pool doesn't exist"))
+		return &model.QueryResult{OK: false, Message: "pool doesn't exist"}
 	}
 
 	ctx := context.Background()
-	response := &model.GenericResponse{OK: true}
+
+	response := &model.QueryResult{OK: true}
 
 	normalizedQuery := strings.ToLower(strings.TrimSpace(query))
-	isReadOperation := strings.HasPrefix(normalizedQuery, "select") ||
-		strings.HasPrefix(normalizedQuery, "with") ||
-		strings.HasPrefix(normalizedQuery, "show")
 
-	if isReadOperation {
-		// Use Query for read operations
-		rows, err := pool.Query(ctx, query)
-		if err != nil {
-			return errorResponse(err)
-		}
-		defer rows.Close()
+	isWrite := isWriteOperation(normalizedQuery)
 
-		columns := rows.FieldDescriptions()
-		columnNames := make([]string, len(columns))
-		for i, col := range columns {
-			columnNames[i] = string(col.Name)
-		}
-
-		var result [][]any
-
-		for rows.Next() {
-			values, err := rows.Values()
-			if err != nil {
-				return errorResponse(err)
-			}
-
-			rowData := make([]any, len(values))
-			for i, val := range values {
-				switch v := val.(type) {
-				case []byte:
-					rowData[i] = string(v)
-				case time.Time:
-					rowData[i] = v.Format(time.RFC3339)
-				default:
-					rowData[i] = val
-				}
-			}
-			result = append(result, rowData)
-		}
-
-		if err := rows.Err(); err != nil {
-			return errorResponse(err)
-		}
-
-		response.Columns = columnNames
-		response.Rows = result
-	} else {
+	if isWrite {
 		// Use Exec for write operations
 		tag, err := pool.Exec(ctx, query)
 		if err != nil {
-			return errorResponse(err)
+			return &model.QueryResult{OK: false, Message: err.Error()}
 		}
 		response.RowsAffected = tag.RowsAffected()
+	} else {
+		// Use Query for read operations
+		resultRows, err := pool.Query(ctx, query)
+		if err != nil {
+			return &model.QueryResult{OK: false, Message: err.Error()}
+		}
+		defer resultRows.Close()
+
+		columns := resultRows.FieldDescriptions()
+		columnNames := make([]string, len(columns))
+		for i, column := range columns {
+			columnNames[i] = string(column.Name)
+		}
+		response.Columns = columnNames
+
+		var rows [][]model.Cell
+
+		for resultRows.Next() {
+			row, err := resultRows.Values()
+			if err != nil {
+				return &model.QueryResult{OK: false, Message: err.Error()}
+			}
+
+			cells := []model.Cell{}
+			for i, cell := range row {
+				newCell := model.Cell{
+					Column: columnNames[i],
+				}
+				switch v := cell.(type) {
+				case []byte:
+					newCell.Value = string(v)
+				case time.Time:
+					newCell.Value = v.Format(time.RFC3339)
+				case uuid.UUID:
+					newCell.Value = v.String()
+				default:
+					newCell.Value = fmt.Sprintf("%v", v)
+				}
+				cells = append(cells, newCell)
+			}
+			rows = append(rows, cells)
+		}
+
+		if err := resultRows.Err(); err != nil {
+			return &model.QueryResult{OK: false, Message: err.Error()}
+		}
+
+		response.Rows = rows
 	}
 
 	return response
-}
-
-func errorResponse(err error) *model.GenericResponse {
-	return &model.GenericResponse{
-		OK:      false,
-		Message: err.Error(),
-	}
 }

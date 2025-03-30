@@ -28,11 +28,15 @@ type Database struct {
 	Columns  []string
 }
 
-type GenericResponse struct {
-	OK           bool          `json:"ok"`
-	Data         []interface{} `json:"data"`
-	RowsAffected int64         `json:"rowsAffected"`
-	Message      string        `json:"message"`
-	Columns      []string      `json:"columns"`
-	Rows         [][]any       `json:"rows"`
+type Cell struct {
+	Column string `json:"column"`
+	Value  string `json:"value"`
+}
+
+type QueryResult struct {
+	OK           bool     `json:"ok"`
+	Columns      []string `json:"columns"`
+	Rows         [][]Cell `json:"rows"`
+	RowsAffected int64    `json:"rowsAffected"`
+	Message      string   `json:"message"`
 }
