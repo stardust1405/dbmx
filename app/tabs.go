@@ -164,3 +164,13 @@ func (t *Tabs) UpdateTabEditorContent(id int64, editor string) error {
 
 	return nil
 }
+
+func (t *Tabs) UpdateTabOutput(id int64, output string) error {
+	query := `UPDATE tabs SET output = ? WHERE id = ?`
+	_, err := t.DB.Exec(query, output, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
