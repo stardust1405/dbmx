@@ -11,3 +11,5 @@ export function GetAllTabs():Promise<Array<model.Tab>>;
 export function SetActiveTab(arg1:number):Promise<model.Tab>;
 
 export function UpdateTabEditorContent(arg1:number,arg2:string):Promise<void>;
+
+export function UpdateTabOutput(arg1:number,arg2:string):Promise<void>;

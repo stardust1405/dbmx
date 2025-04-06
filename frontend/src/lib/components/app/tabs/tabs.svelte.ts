@@ -26,7 +26,23 @@ export let suggestions = $state<Array<string>>([
     'SUM()',
     'AVG()',
     'MAX()',
-    'MIN()'
+    'MIN()',
+    'UPDATE',
+    'INSERT',
+    'DELETE',
+    'ALTER',
+    'CREATE',
+    'DROP',
+    'TRUNCATE',
+    'RENAME',
+    'EXPLAIN',
+    'EXPLAIN ANALYZE',
+    'EXPLAIN QUERY PLAN',
+    'EXPLAIN CACHE',
+    'EXPLAIN CONFIG',
+    'EXPLAIN DEBUG',
+    'EXPLAIN TRIGGER',
+    'SET'
 ]);
 
 // Handle DB selection

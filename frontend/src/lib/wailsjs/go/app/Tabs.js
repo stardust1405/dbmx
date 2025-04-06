@@ -21,3 +21,7 @@ export function SetActiveTab(arg1) {
 export function UpdateTabEditorContent(arg1, arg2) {
   return window['go']['app']['Tabs']['UpdateTabEditorContent'](arg1, arg2);
 }
+
+export function UpdateTabOutput(arg1, arg2) {
+  return window['go']['app']['Tabs']['UpdateTabOutput'](arg1, arg2);
+}
