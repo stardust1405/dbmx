@@ -2,7 +2,7 @@
 
 ## DBMX
 
-A modern and productivity focused database management tool. It is under active development and NOT ready for production use.
+A modern and productivity focused database management tool (DBMS). It is under active development and NOT ready for production use.
 
 ## Early Preview
 #### Sidebar and Tabs
