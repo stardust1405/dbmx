@@ -40,3 +40,8 @@ type QueryResult struct {
 	RowsAffected int64    `json:"rowsAffected"`
 	Message      string   `json:"message"`
 }
+
+type Output struct {
+	Columns []string `json:"columns"`
+	Rows    [][]Cell `json:"rows"`
+}

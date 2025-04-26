@@ -9,7 +9,7 @@ export function EstablishPostgresConnection(arg1:number):Promise<Array<model.Dat
 
 export function EstablishPostgresDatabaseConnection(arg1:number,arg2:string,arg3:string):Promise<model.Database>;
 
-export function ExecuteQuery(arg1:uuid.UUID,arg2:string):Promise<model.QueryResult>;
+export function ExecuteQuery(arg1:uuid.UUID,arg2:string,arg3:number):Promise<model.QueryResult>;
 
 export function GetAllDatabaseColumns(arg1:uuid.UUID):Promise<Array<string>>;
 
@@ -26,3 +26,5 @@ export function RefreshPostgresDatabase(arg1:number,arg2:string,arg3:string,arg4
 export function TerminatePostgresDatabaseConnection(arg1:string):Promise<boolean>;
 
 export function TestConnectPostgres(arg1:model.PostgresConnection):Promise<boolean>;
+
+export function UpdateTabOutput(arg1:number,arg2:model.Output):Promise<void>;

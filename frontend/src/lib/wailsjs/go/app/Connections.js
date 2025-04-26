@@ -14,8 +14,8 @@ export function EstablishPostgresDatabaseConnection(arg1, arg2, arg3) {
   return window['go']['app']['Connections']['EstablishPostgresDatabaseConnection'](arg1, arg2, arg3);
 }
 
-export function ExecuteQuery(arg1, arg2) {
-  return window['go']['app']['Connections']['ExecuteQuery'](arg1, arg2);
+export function ExecuteQuery(arg1, arg2, arg3) {
+  return window['go']['app']['Connections']['ExecuteQuery'](arg1, arg2, arg3);
 }
 
 export function GetAllDatabaseColumns(arg1) {
@@ -48,4 +48,8 @@ export function TerminatePostgresDatabaseConnection(arg1) {
 
 export function TestConnectPostgres(arg1) {
   return window['go']['app']['Connections']['TestConnectPostgres'](arg1);
+}
+
+export function UpdateTabOutput(arg1, arg2) {
+  return window['go']['app']['Connections']['UpdateTabOutput'](arg1, arg2);
 }

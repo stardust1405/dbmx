@@ -19,7 +19,8 @@
 		DeleteTab,
 		GetAllTabs,
 		SetActiveTab,
-		UpdateTabEditorContent
+		UpdateTabEditorContent,
+		SaveActiveDBProps
 	} from '$lib/wailsjs/go/app/Tabs';
 	import { SvelteMap } from 'svelte/reactivity';
 	import { activeDBs, suggestions } from './tabs.svelte.ts';
@@ -86,9 +87,30 @@
 					tabID = tab.ID;
 					tabName = tab.Name;
 					editor = tab.Editor;
+
+					// Update columns
+					for (const column of tab.columns) {
+						columns.push({
+							accessorKey: column,
+							header: column
+						});
+					}
+
+					for (const row of tab.rows) {
+						let cell: Record<string, any> = {};
+						for (const resultCell of row) {
+							if (resultCell.column && resultCell.value) {
+								cell[resultCell.column] = resultCell.value;
+							}
+						}
+						rows.push(cell);
+					}
 				}
 			}
 		});
+
+		columns = [];
+		rows = [];
 	}
 
 	// Write a function to call addTab when pressed cmd + t
@@ -102,13 +124,20 @@
 
 	function addTab() {
 		// Send default values for now in activeDBID and activeDB
-		AddTab(0, '').then((tab) => {
+		AddTab(activePoolID, selectedDBDisplay, currentColor).then((tab) => {
 			tabsMap.set(tab.ID, tab);
 
 			tabID = tab.ID;
 			tabName = tab.Name;
 			editor = tab.Editor;
 		});
+
+		selectedDBDisplay = selectedDBDisplay;
+		activePoolID = activePoolID;
+		currentColor = currentColor;
+
+		columns = [];
+		rows = [];
 	}
 
 	function deleteTab(id: number) {
@@ -120,9 +149,33 @@
 				tabID = tab.ID;
 				tabName = tab.Name;
 				editor = tab.Editor;
+
+				selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+				activePoolID = tab.ActiveDBID || '';
+				currentColor = tab.ActiveDBColor || '';
+
+				// Update columns
+				for (const column of tab.columns) {
+					columns.push({
+						accessorKey: column,
+						header: column
+					});
+				}
+
+				for (const row of tab.rows) {
+					let cell: Record<string, any> = {};
+					for (const resultCell of row) {
+						if (resultCell.column && resultCell.value) {
+							cell[resultCell.column] = resultCell.value;
+						}
+					}
+					rows.push(cell);
+				}
 			}
 		});
-		console.log(tabsMap);
+
+		columns = [];
+		rows = [];
 	}
 
 	function setActiveTab(id: number) {
@@ -132,7 +185,32 @@
 			tabID = tab.ID;
 			tabName = tab.Name;
 			editor = tab.Editor;
+
+			selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+			activePoolID = tab.ActiveDBID || '';
+			currentColor = tab.ActiveDBColor || '';
+
+			// Update columns
+			for (const column of tab.columns) {
+				columns.push({
+					accessorKey: column,
+					header: column
+				});
+			}
+
+			for (const row of tab.rows) {
+				let cell: Record<string, any> = {};
+				for (const resultCell of row) {
+					if (resultCell.column && resultCell.value) {
+						cell[resultCell.column] = resultCell.value;
+					}
+				}
+				rows.push(cell);
+			}
 		});
+
+		columns = [];
+		rows = [];
 	}
 
 	let selectedDBDisplay = $state('Connect to a database');
@@ -188,7 +266,7 @@
 			return;
 		}
 		// Execute query
-		ExecuteQuery(activePoolID, selectedText)
+		ExecuteQuery(activePoolID, selectedText, tabID)
 			.then((result) => {
 				if (!result.ok) {
 					toast.error('Query Failed', {
@@ -230,8 +308,8 @@
 				});
 			});
 
-		columns.splice(0, columns.length);
-		rows.splice(0, rows.length);
+		columns = [];
+		rows = [];
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
@@ -248,6 +326,14 @@
 			currentColor = '';
 		}
 	});
+
+	function selectActiveDB(activeDBDisplay: string, poolID: string, activeDBColor: string) {
+		selectedDBDisplay = activeDBDisplay;
+		activePoolID = poolID;
+		currentColor = activeDBColor;
+
+		SaveActiveDBProps(tabID, activePoolID, activeDBDisplay, activeDBColor);
+	}
 </script>
 
 <Tabs.Root value={tabID.toString()}>
@@ -299,11 +385,12 @@
 								<Select.Group>
 									{#each activeDBs as activeDB}
 										<Select.Item
-											onclick={() => {
-												activePoolID = activeDB.PoolID;
-												currentColor = activeDB.Colour;
-												selectedDBDisplay = activeDB.PostgresConnectionName + ' - ' + activeDB.Name;
-											}}
+											onclick={() =>
+												selectActiveDB(
+													activeDB.PostgresConnectionName + ' - ' + activeDB.Name,
+													activeDB.PoolID,
+													activeDB.Colour
+												)}
 											class="{getColorClass(activeDB.Colour)} bg-opacity-20 hover:bg-opacity-25"
 											value={activeDB.ID}
 											label={activeDB.Name}

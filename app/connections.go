@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"dbmx/model"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
@@ -80,7 +81,7 @@ func (m *Connections) TestConnectPostgres(p model.PostgresConnection) (bool, err
 	}
 
 	// Build connection string using the credentials
-	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", p.Username, p.Password, p.Host, p.Port, p.Database)
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require", p.Username, p.Password, p.Host, p.Port, p.Database)
 
 	// Establish a connection
 	ctx := context.Background()
@@ -172,7 +173,7 @@ func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName
 	}
 
 	// Make a connection string
-	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", username, password, host, port, dbName)
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require", username, password, host, port, dbName)
 
 	activePoolID := uuid.New()
 
@@ -229,7 +230,7 @@ func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, e
 	}
 
 	// Make a connection string
-	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", username, password, host, port, database)
+	connString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=require", username, password, host, port, database)
 
 	activePoolID := uuid.New()
 
@@ -388,6 +389,12 @@ func (c *Connections) TerminatePostgresDatabaseConnection(activePoolID string) (
 		return false, err
 	}
 
+	// Remove the pool from all the tabs in which it's saved
+	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = NULL, active_db = NULL, active_db_colour = NULL WHERE active_db_id = ?", activePoolID)
+	if err != nil {
+		return false, err
+	}
+
 	return true, nil
 }
 
@@ -408,7 +415,7 @@ func isWriteOperation(query string) bool {
 	return false
 }
 
-func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string) *model.QueryResult {
+func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, tabID int64) *model.QueryResult {
 	pool, exists := c.PM.GetPool(activePoolID)
 	if !exists {
 		return &model.QueryResult{OK: false, Message: "pool doesn't exist"}
@@ -479,5 +486,25 @@ func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string) *model.
 		response.Rows = rows
 	}
 
+	output := &model.Output{
+		Columns: response.Columns,
+		Rows:    response.Rows,
+	}
+
+	go c.UpdateTabOutput(tabID, output)
+
 	return response
+}
+
+func (c *Connections) UpdateTabOutput(tabID int64, output *model.Output) {
+	jsonOutput, err := json.Marshal(output)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	query := `UPDATE tabs SET output = ? WHERE id = ?`
+	_, err = c.DB.Exec(query, string(jsonOutput), tabID)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
