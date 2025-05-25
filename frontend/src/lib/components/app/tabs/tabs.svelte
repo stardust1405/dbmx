@@ -313,8 +313,21 @@
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
-		if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+		if (event.altKey && event.key === 'Enter') {
+			event.preventDefault();
 			executeQuery();
+		}
+		// Command+S (Mac) or Ctrl+S (Windows/Linux)
+		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
+			event.preventDefault();
+			// Your custom logic here
+			toast.success('Not Needed! 😂', {
+				description: 'Your queries are saved automatically 😂',
+				action: {
+					label: 'OK',
+					onClick: () => console.info('OK')
+				}
+			});
 		}
 	}
 
