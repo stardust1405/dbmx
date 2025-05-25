@@ -69,7 +69,27 @@
 			theme: 'vs-dark',
 			minimap: { enabled: false },
 			fontSize: 14,
-			automaticLayout: true
+			automaticLayout: true,
+			glyphMargin: true
+		});
+
+		const model = editor.getModel();
+		if (!model) return;
+
+		editor.onMouseDown((e) => {
+			const position = editor.getPosition();
+			if (!position) return;
+
+			let currentLineContent = model.getLineContent(position.lineNumber).trim();
+			selectedText = currentLineContent;
+		});
+
+		editor.onKeyUp((e) => {
+			const position = editor.getPosition();
+			if (!position) return;
+
+			let currentLineContent = model.getLineContent(position.lineNumber).trim();
+			selectedText = currentLineContent;
 		});
 
 		// Update value when editor content changes
@@ -77,14 +97,32 @@
 			value = editor.getValue();
 		});
 
-		// Manually trigger suggestions on key press
-		editor.onKeyDown((e) => {
-			if (e.keyCode === 32 || e.keyCode === 9) {
-				// Space or Tab
-				// Use the correct command for triggering suggestions
-				editor.trigger('keyboard', 'editor.action.triggerSuggest', null);
-			}
-		});
+		// editor.createDecorationsCollection([
+		// 	{
+		// 		range: new monaco.Range(1, 1, 1, 1),
+		// 		options: {
+		// 			isWholeLine: true,
+		// 			className: 'bg-green-100 bg-opacity-5',
+		// 			glyphMarginClassName: 'bg-green-500 bg-opacity-20'
+		// 		}
+		// 	},
+		// 	{
+		// 		range: new monaco.Range(3, 1, 6, 1),
+		// 		options: {
+		// 			isWholeLine: true,
+		// 			className: 'bg-green-100 bg-opacity-5',
+		// 			glyphMarginClassName: 'bg-green-500 bg-opacity-20'
+		// 		}
+		// 	},
+		// 	{
+		// 		range: new monaco.Range(8, 1, 11, 1),
+		// 		options: {
+		// 			isWholeLine: true,
+		// 			className: 'bg-green-100 bg-opacity-5',
+		// 			glyphMarginClassName: 'bg-green-500 bg-opacity-20'
+		// 		}
+		// 	}
+		// ]);
 
 		// Mark as initialized after editor is created
 		isInitialized = true;
@@ -98,8 +136,8 @@
 	// Function to update the state with the selected text
 	function handleSelection() {
 		const selection = window.getSelection();
-		if (selection) {
-			selectedText = selection.toString();
+		if (selection && selection.toString().trim() !== '') {
+			selectedText = selection.toString().trim();
 		}
 	}
 </script>
