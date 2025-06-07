@@ -28,22 +28,6 @@
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
 
-	function resetSplitView() {
-		// Force a reset of the pane sizes
-		editorHeight = 50;
-		outputHeight = 50;
-
-		// Force a re-render of the panes
-		setTimeout(() => {
-			const panes = document.querySelectorAll('.rsz-pane');
-			if (panes.length >= 2) {
-				// Update the style directly if needed
-				panes[0].setAttribute('style', 'height: 50%');
-				panes[1].setAttribute('style', 'height: 50%');
-			}
-		}, 0);
-	}
-
 	// Handle Tabs
 
 	// Active tab properties
@@ -383,14 +367,15 @@
 
 	{#if tabsMap.size > 0}
 		<!-- Main Content on screen -->
-		<div class="flex h-screen flex-1 flex-col gap-4 p-4">
+		<div class="flex h-screen flex-1 flex-col px-4">
 			<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
 				<div class="flex h-full flex-col">
-					<div class="mb-2 flex items-center justify-between">
-						<h2 class="text-lg font-semibold">{tabName}</h2>
+					<div class="flex items-center justify-between">
 						<Select.Root type="single" name="activeDatabase">
 							<Select.Trigger
-								class="{getColorClass(currentColor)} w-[180px] bg-opacity-20 hover:bg-opacity-25"
+								class="{getColorClass(
+									currentColor
+								)} prevent:default w-auto bg-opacity-20 hover:bg-opacity-25"
 							>
 								{selectedDBDisplay}
 							</Select.Trigger>
@@ -413,38 +398,31 @@
 								</Select.Group>
 							</Select.Content>
 						</Select.Root>
-						<div class="flex gap-2">
-							<Button variant="outline" size="sm" onclick={resetSplitView}>
-								<ArrowsMaximize size={16} class="mr-2" /> Reset Split
-							</Button>
+						<div class="flex">
 							<Button variant="default" size="sm" onclick={executeQuery}>Execute Query</Button>
 						</div>
 					</div>
 
 					<Resizable.ResizablePaneGroup direction="vertical" class="h-full">
 						<!-- SQL Editor Pane -->
-						<Resizable.ResizablePane
+						<Resizable.Pane
 							defaultSize={editorHeight}
 							minSize={10}
-							class="rsz-pane overflow-hidden rounded-md border"
+							class="rsz-pane my-3 overflow-hidden rounded-md border"
 						>
 							<SqlEditor bind:value={editor} bind:selectedText {suggestions} />
-						</Resizable.ResizablePane>
+						</Resizable.Pane>
 
-						<Resizable.ResizableHandle />
+						<Resizable.ResizableHandle withHandle />
 
 						<!-- Output Pane -->
-						<Resizable.ResizablePane
-							defaultSize={outputHeight}
-							minSize={10}
-							class="rsz-pane overflow-auto"
-						>
+						<Resizable.Pane defaultSize={outputHeight} minSize={10} class="rsz-pane overflow-auto">
 							<div class="h-full overflow-auto">
 								{#if columns.length > 0}
 									<DataTable data={rows} {columns} />
 								{/if}
 							</div>
-						</Resizable.ResizablePane>
+						</Resizable.Pane>
 					</Resizable.ResizablePaneGroup>
 				</div>
 			</Tabs.Content>
