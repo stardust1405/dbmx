@@ -8,6 +8,7 @@
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import ChevronRight from 'lucide-svelte/icons/chevron-right';
 	import Plus from 'lucide-svelte/icons/plus';
+	import Settings from 'lucide-svelte/icons/settings';
 	import Activity from 'lucide-svelte/icons/activity';
 	import Table2 from 'lucide-svelte/icons/table-2';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
@@ -348,14 +349,19 @@
 		</Sidebar.Group>
 	</Sidebar.Content>
 	<Sidebar.Footer>
-		<Sidebar.Menu>
+		<div class="flex flex-row items-center">
+			<Plus size={25} class="align-left mx-2" />
+			<SettingsDialog />
+			<a href="/settings" class="ml-auto"><Settings size={25} color="#f05c5c" href="/settings" /></a
+			>
+		</div>
+		<!-- <Sidebar.Menu>
 			<Sidebar.MenuItem>
 				<Sidebar.MenuButton>
-					<Plus />
-					<SettingsDialog />
+					
 				</Sidebar.MenuButton>
 			</Sidebar.MenuItem>
-		</Sidebar.Menu>
+		</Sidebar.Menu> -->
 	</Sidebar.Footer>
 	<Sidebar.Rail />
 </Sidebar.Root>
