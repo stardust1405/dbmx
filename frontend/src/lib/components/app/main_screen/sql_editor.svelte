@@ -76,20 +76,134 @@
 		const model = editor.getModel();
 		if (!model) return;
 
+		// On initialization
+		let decorationCollection = editor.createDecorationsCollection([]);
+
+		// Select the query on click and highlight it
 		editor.onMouseDown((e) => {
 			const position = editor.getPosition();
 			if (!position) return;
 
-			let currentLineContent = model.getLineContent(position.lineNumber).trim();
-			selectedText = currentLineContent;
+			let currentLineNumber = position.lineNumber;
+			let queryStartLineNumber = currentLineNumber;
+			let queryEndLineNumber = currentLineNumber;
+
+			// Move to the start of the query
+			while (true) {
+				if (currentLineNumber === 1) {
+					queryStartLineNumber = 1;
+					break;
+				}
+
+				const lineContent = model.getLineContent(currentLineNumber - 1).trim();
+				if (lineContent === '') {
+					queryStartLineNumber = currentLineNumber;
+					break;
+				}
+
+				currentLineNumber--;
+			}
+
+			// Move to the end of the query
+			while (true) {
+				if (currentLineNumber === model.getLineCount()) {
+					queryEndLineNumber = model.getLineCount();
+					break;
+				}
+
+				const lineContent = model.getLineContent(currentLineNumber + 1).trim();
+				if (lineContent === '') {
+					queryEndLineNumber = currentLineNumber;
+					break;
+				}
+
+				currentLineNumber++;
+			}
+
+			const selection = new monaco.Range(
+				queryStartLineNumber,
+				1,
+				queryEndLineNumber,
+				model.getLineLength(queryEndLineNumber) + 1
+			);
+
+			// On each mouse click
+			decorationCollection.set([
+				{
+					range: selection,
+					options: {
+						isWholeLine: true,
+						className: 'bg-green-100 bg-opacity-5',
+						glyphMarginClassName: 'bg-green-500 bg-opacity-20'
+					}
+				}
+			]);
+
+			// Get content from the selection
+			selectedText = model.getValueInRange(selection).trim();
 		});
 
+		// Select the query when cursor is placed on it using arrow keys
 		editor.onKeyUp((e) => {
 			const position = editor.getPosition();
 			if (!position) return;
 
-			let currentLineContent = model.getLineContent(position.lineNumber).trim();
-			selectedText = currentLineContent;
+			let currentLineNumber = position.lineNumber;
+			let queryStartLineNumber = currentLineNumber;
+			let queryEndLineNumber = currentLineNumber;
+
+			// Move to the start of the query
+			while (true) {
+				if (currentLineNumber === 1) {
+					queryStartLineNumber = 1;
+					break;
+				}
+
+				const lineContent = model.getLineContent(currentLineNumber - 1).trim();
+				if (lineContent === '') {
+					queryStartLineNumber = currentLineNumber;
+					break;
+				}
+
+				currentLineNumber--;
+			}
+
+			// Move to the end of the query
+			while (true) {
+				if (currentLineNumber === model.getLineCount()) {
+					queryEndLineNumber = model.getLineCount();
+					break;
+				}
+
+				const lineContent = model.getLineContent(currentLineNumber + 1).trim();
+				if (lineContent === '') {
+					queryEndLineNumber = currentLineNumber;
+					break;
+				}
+
+				currentLineNumber++;
+			}
+
+			const selection = new monaco.Range(
+				queryStartLineNumber,
+				1,
+				queryEndLineNumber,
+				model.getLineLength(queryEndLineNumber) + 1
+			);
+
+			// On each mouse click
+			decorationCollection.set([
+				{
+					range: selection,
+					options: {
+						isWholeLine: true,
+						className: 'bg-green-100 bg-opacity-5',
+						glyphMarginClassName: 'bg-green-500 bg-opacity-20'
+					}
+				}
+			]);
+
+			selectedText = model.getValueInRange(selection).trim();
 		});
 
 		// Update value when editor content changes
