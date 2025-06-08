@@ -20,7 +20,7 @@
 	let open = $state(false);
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'j' && (e.metaKey || e.ctrlKey)) {
+		if (e.key === 'p' && (e.metaKey || e.ctrlKey)) {
 			e.preventDefault();
 			open = !open;
 		}
