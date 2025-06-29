@@ -1,7 +1,6 @@
 import { SvelteMap } from 'svelte/reactivity';
 import { model } from '$lib/wailsjs/go/models';
 import { writable } from 'svelte/store';
-import type { ColumnDef, RowData } from '@tanstack/table-core';
 
 
 export let postgresConnectionsMap = $state(new SvelteMap<number, model.PostgresConnection>());

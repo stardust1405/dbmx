@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { onMount } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import type { model } from '$lib/wailsjs/go/models';
 </script>
 
@@ -16,7 +16,12 @@
 	import { type ComponentProps } from 'svelte';
 	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
 
-	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
+	let {
+		ref = $bindable(null),
+		tabID = $bindable(0),
+		tabName = $bindable(''),
+		...restProps
+	}: ComponentProps<typeof Sidebar.Root> = $props();
 
 	import {
 		postgresConnectionsMap,
@@ -25,7 +30,10 @@
 		loadingMap,
 		dbLoadingMap,
 		activeDBs,
-		suggestions
+		suggestions,
+		selectedDBDisplay,
+		currentColor,
+		activePoolID
 	} from '$lib/state.svelte';
 
 	import {
@@ -38,6 +46,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { toast } from 'svelte-sonner';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import { SaveActiveDBProps } from '$lib/wailsjs/go/app/Tabs';
 
 	const refresh = () => {
 		GetPostgresConnections()
@@ -89,6 +98,11 @@
 				$suggestions.push(...db.Tables);
 				$suggestions.push(...db.Columns);
 
+				$selectedDBDisplay = db.PostgresConnectionName + ' - ' + db.Name;
+				$currentColor = db.Colour;
+				$activePoolID = db.PoolID;
+				SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
+
 				toast.success('Connected to ' + db.Name, {});
 			})
 			.catch((error) => {
@@ -121,6 +135,12 @@
 						$activeDBs.push(db);
 						$suggestions.push(...db.Tables);
 						$suggestions.push(...db.Columns);
+
+						// Set active DB
+						$selectedDBDisplay = db.PostgresConnectionName + ' - ' + db.Name;
+						$currentColor = db.Colour;
+						$activePoolID = db.PoolID;
+						SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
 
 						toast.success('Connected to ' + db.Name, {});
 					}
@@ -203,6 +223,19 @@
 					databasesMap.delete(dbID);
 					databasesMap.set(dbID, db);
 
+					if ($activeDBs.length == 0) {
+						$selectedDBDisplay = 'Connect to a database';
+						$currentColor = '';
+						$activePoolID = '';
+					} else {
+						// Set active DB
+						$selectedDBDisplay = $activeDBs[0].PostgresConnectionName + ' - ' + $activeDBs[0].Name;
+						$currentColor = $activeDBs[0].Colour;
+						$activePoolID = $activeDBs[0].PoolID;
+					}
+
+					SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
+
 					toast.success('Disconnected ' + db.Name, {});
 				}
 			})
@@ -246,7 +279,7 @@
 	}
 </script>
 
-<Sidebar.Root bind:ref {...restProps}>
+<Sidebar.Root bind:ref {tabID} {tabName} {...restProps}>
 	<Sidebar.Content>
 		<Sidebar.Group>
 			<Sidebar.GroupLabel>
