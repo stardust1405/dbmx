@@ -6,7 +6,7 @@
 	import Plus from 'lucide-svelte/icons/plus';
 	import * as Resizable from '$lib/components/ui/resizable/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
-	import { onMount } from 'svelte';
+	import { onMount, type ComponentProps } from 'svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -62,8 +62,7 @@
 	import type { ColumnDef, RowData } from '@tanstack/table-core';
 
 	// Active tab properties
-	let tabID = $state(0);
-	let tabName = $state('');
+	let { tabID = $bindable(0), tabName = $bindable('') } = $props();
 	let editor = $state('');
 
 	let columns = $state<ColumnDef<RowData, unknown>[]>([]);
@@ -86,6 +85,19 @@
 					tabID = tab.ID;
 					tabName = tab.Name;
 					editor = tab.Editor;
+
+					console.log($activeDBs.length);
+
+					if ($activeDBs.length == 0) {
+						$selectedDBDisplay = 'Connect to a database';
+						$currentColor = '';
+						$activePoolID = '';
+					} else {
+						console.log('in else', tab.ActiveDB);
+						$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+						$activePoolID = tab.ActiveDBID || '';
+						$currentColor = tab.ActiveDBColor || '';
+					}
 
 					// Update columns
 					for (const column of tab.columns) {
@@ -177,9 +189,15 @@
 			tabName = tab.Name;
 			editor = tab.Editor;
 
-			$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
-			$activePoolID = tab.ActiveDBID || '';
-			$currentColor = tab.ActiveDBColor || '';
+			if ($activeDBs.length == 0) {
+				$selectedDBDisplay = 'Connect to a database';
+				$currentColor = '';
+				$activePoolID = '';
+			} else {
+				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+				$activePoolID = tab.ActiveDBID || '';
+				$currentColor = tab.ActiveDBColor || '';
+			}
 
 			// Update columns
 			for (const column of tab.columns) {
@@ -323,7 +341,7 @@
 		}
 	});
 
-	function selectActiveDB(activeDBDisplay: string, poolID: string, activeDBColor: string) {
+	export function selectActiveDB(activeDBDisplay: string, poolID: string, activeDBColor: string) {
 		$selectedDBDisplay = activeDBDisplay;
 		$activePoolID = poolID;
 		$currentColor = activeDBColor;
