@@ -333,99 +333,105 @@
 	}
 </script>
 
-<Tabs.Root value={tabID.toString()}>
-	<!-- Tabs visible in the header -->
-	<header class="flex h-14 shrink-0 items-center gap-2 overflow-auto border-b px-4">
-		<Sidebar.Trigger class="-ml-1" />
-		<Separator orientation="vertical" />
-		<Tabs.List>
-			{#each Array.from(tabsMap.entries()) as [key, tab]}
-				<div class="mr-2 flex rounded-sm bg-slate-800">
-					<Tabs.Trigger
-						value={tab.ID.toString()}
-						class="flex items-center"
-						onclick={() => setActiveTab(tab.ID)}
-					>
-						{tab.Name}
-					</Tabs.Trigger>
-					<button
-						class="rounded-r-sm bg-slate-900 px-2 py-1 text-slate-300 hover:text-red-700"
-						onclick={() => deleteTab(tab.ID)}
-					>
-						<X size={16} />
-					</button>
-				</div>
-			{/each}
-			<button
-				class="ml-2 flex items-center gap-1 text-blue-500 hover:text-blue-700"
-				onclick={addTab}
-			>
-				<Plus size={16} /> Add Tab
-			</button>
-		</Tabs.List>
-	</header>
-
-	{#if tabsMap.size > 0}
-		<!-- Main Content on screen -->
-		<div class="flex h-screen flex-1 flex-col px-4">
-			<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
-				<div class="flex h-full flex-col">
-					<div class="flex items-center justify-between">
-						<Select.Root type="single" name="activeDatabase">
-							<Select.Trigger
-								class="{getColorClass(
-									currentColor
-								)} prevent:default w-auto bg-opacity-20 hover:bg-opacity-25"
-							>
-								{selectedDBDisplay}
-							</Select.Trigger>
-							<Select.Content>
-								<Select.Group>
-									{#each activeDBs as activeDB}
-										<Select.Item
-											onclick={() =>
-												selectActiveDB(
-													activeDB.PostgresConnectionName + ' - ' + activeDB.Name,
-													activeDB.PoolID,
-													activeDB.Colour
-												)}
-											class="{getColorClass(activeDB.Colour)} bg-opacity-20 hover:bg-opacity-25"
-											value={activeDB.ID}
-											label={activeDB.Name}
-											>{activeDB.PostgresConnectionName} - {activeDB.Name}</Select.Item
-										>
-									{/each}
-								</Select.Group>
-							</Select.Content>
-						</Select.Root>
-						<div class="flex">
-							<Button variant="default" size="sm" onclick={executeQuery}>Execute Query</Button>
-						</div>
-					</div>
-
-					<Resizable.ResizablePaneGroup direction="vertical" class="h-full">
-						<!-- SQL Editor Pane -->
-						<Resizable.Pane
-							defaultSize={editorHeight}
-							minSize={10}
-							class="rsz-pane my-3 overflow-hidden rounded-md border"
+<div class="flex h-full flex-1 flex-col overflow-hidden">
+	<Tabs.Root value={tabID.toString()} class="flex h-full flex-1 flex-col overflow-hidden">
+		<!-- Tabs visible in the header -->
+		<header class="flex h-14 shrink-0 items-center gap-2 overflow-auto border-b px-4">
+			<Sidebar.Trigger class="-ml-1" />
+			<Separator orientation="vertical" />
+			<Tabs.List>
+				{#each Array.from(tabsMap.entries()) as [key, tab]}
+					<div class="mr-2 flex rounded-sm bg-slate-800">
+						<Tabs.Trigger
+							value={tab.ID.toString()}
+							class="flex items-center"
+							onclick={() => setActiveTab(tab.ID)}
 						>
-							<SqlEditor bind:value={editor} bind:selectedText {suggestions} />
-						</Resizable.Pane>
+							{tab.Name}
+						</Tabs.Trigger>
+						<button
+							class="rounded-r-sm bg-slate-900 px-2 py-1 text-slate-300 hover:text-red-700"
+							onclick={() => deleteTab(tab.ID)}
+						>
+							<X size={16} />
+						</button>
+					</div>
+				{/each}
+				<button
+					class="ml-2 flex items-center gap-1 text-blue-500 hover:text-blue-700"
+					onclick={addTab}
+				>
+					<Plus size={16} /> Add Tab
+				</button>
+			</Tabs.List>
+		</header>
 
-						<Resizable.ResizableHandle withHandle />
-
-						<!-- Output Pane -->
-						<Resizable.Pane defaultSize={outputHeight} minSize={10} class="rsz-pane overflow-auto">
-							<div class="h-full overflow-auto">
-								{#if columns.length > 0}
-									<DataTable data={rows} {columns} />
-								{/if}
+		{#if tabsMap.size > 0}
+			<!-- Main Content on screen -->
+			<div class="flex h-screen flex-1 flex-col px-4">
+				<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
+					<div class="flex h-full flex-col">
+						<div class="flex items-center justify-between">
+							<Select.Root type="single" name="activeDatabase">
+								<Select.Trigger
+									class="{getColorClass(
+										currentColor
+									)} prevent:default w-auto bg-opacity-20 hover:bg-opacity-25"
+								>
+									{selectedDBDisplay}
+								</Select.Trigger>
+								<Select.Content>
+									<Select.Group>
+										{#each activeDBs as activeDB}
+											<Select.Item
+												onclick={() =>
+													selectActiveDB(
+														activeDB.PostgresConnectionName + ' - ' + activeDB.Name,
+														activeDB.PoolID,
+														activeDB.Colour
+													)}
+												class="{getColorClass(activeDB.Colour)} bg-opacity-20 hover:bg-opacity-25"
+												value={activeDB.ID}
+												label={activeDB.Name}
+												>{activeDB.PostgresConnectionName} - {activeDB.Name}</Select.Item
+											>
+										{/each}
+									</Select.Group>
+								</Select.Content>
+							</Select.Root>
+							<div class="flex">
+								<Button variant="default" size="sm" onclick={executeQuery}>Execute Query</Button>
 							</div>
-						</Resizable.Pane>
-					</Resizable.ResizablePaneGroup>
-				</div>
-			</Tabs.Content>
-		</div>
-	{/if}
-</Tabs.Root>
+						</div>
+
+						<Resizable.ResizablePaneGroup direction="vertical" class="h-full">
+							<!-- SQL Editor Pane -->
+							<Resizable.Pane
+								defaultSize={editorHeight}
+								minSize={10}
+								class="rsz-pane my-3 overflow-hidden rounded-md border"
+							>
+								<SqlEditor bind:value={editor} bind:selectedText {suggestions} />
+							</Resizable.Pane>
+
+							<Resizable.ResizableHandle withHandle />
+
+							<!-- Output Pane -->
+							<Resizable.Pane
+								defaultSize={outputHeight}
+								minSize={10}
+								class="rsz-pane overflow-auto"
+							>
+								<div class="h-full overflow-auto">
+									{#if columns.length > 0}
+										<DataTable data={rows} {columns} />
+									{/if}
+								</div>
+							</Resizable.Pane>
+						</Resizable.ResizablePaneGroup>
+					</div>
+				</Tabs.Content>
+			</div>
+		{/if}
+	</Tabs.Root>
+</div>
