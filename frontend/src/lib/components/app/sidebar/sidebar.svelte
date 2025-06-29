@@ -40,7 +40,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { toast } from 'svelte-sonner';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { addActiveDB, removeActiveDB } from '$lib/components/app/tabs/tabs.svelte.ts';
+	import { addActiveDB, removeActiveDB } from '$lib/components/app/main_screen/tabs.svelte.ts';
 
 	onMount(() => {
 		GetPostgresConnections()
