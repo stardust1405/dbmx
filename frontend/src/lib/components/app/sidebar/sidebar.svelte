@@ -12,7 +12,7 @@
 	import Activity from 'lucide-svelte/icons/activity';
 	import Table2 from 'lucide-svelte/icons/table-2';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
-	import SettingsDialog from '$lib/components/settings-dialog.svelte';
+	import SettingsDialog from '$lib/components/app/sidebar/settings-dialog.svelte';
 	import { type ComponentProps, getContext } from 'svelte';
 	import { SvelteMap } from 'svelte/reactivity';
 	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
@@ -40,7 +40,7 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { toast } from 'svelte-sonner';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { activeDBs, addActiveDB, removeActiveDB } from '$lib/components/app/tabs/tabs.svelte.ts';
+	import { addActiveDB, removeActiveDB } from '$lib/components/app/tabs/tabs.svelte.ts';
 
 	onMount(() => {
 		GetPostgresConnections()
