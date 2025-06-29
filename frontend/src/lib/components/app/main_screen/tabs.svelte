@@ -4,40 +4,36 @@
 	import { Separator } from '$lib/components/ui/separator/index.js';
 	import X from 'lucide-svelte/icons/x';
 	import Plus from 'lucide-svelte/icons/plus';
-	import ArrowsMaximize from 'lucide-svelte/icons/maximize-2';
 	import * as Resizable from '$lib/components/ui/resizable/index.js';
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { onMount } from 'svelte';
+	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 
 	import * as Select from '$lib/components/ui/select/index.js';
 
 	// Import our custom components
 	import SqlEditor from '$lib/components/app/main_screen/sql_editor.svelte';
-	import { model } from '$lib/wailsjs/go/models';
 	import {
 		AddTab,
 		DeleteTab,
-		GetAllTabs,
 		SetActiveTab,
 		UpdateTabEditorContent,
-		SaveActiveDBProps
+		SaveActiveDBProps,
+		GetAllTabs
 	} from '$lib/wailsjs/go/app/Tabs';
-	import { SvelteMap } from 'svelte/reactivity';
-	import { activeDBs, suggestions } from './tabs.svelte.ts';
+	import { activeDBs, suggestions } from '$lib/state.svelte';
+	import {
+		tabsMap,
+		selectedDBDisplay,
+		currentColor,
+		activePoolID,
+		selectedQuery
+	} from '$lib/state.svelte';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
 
 	// Handle Tabs
-
-	// Active tab properties
-	let tabID = $state(0);
-	let tabName = $state('');
-	let editor = $state('');
-
-	onMount(() => {
-		getAllTabs();
-	});
 
 	// Call UpdateTabEditorContent on editor change
 	let editorUpdateTimer: number | undefined;
@@ -54,10 +50,29 @@
 		}, 500);
 	});
 
-	// Declare tabsMap as a reactive state variable
-	let tabsMap = $state<SvelteMap<number, model.Tab>>(new SvelteMap<number, model.Tab>());
+	// Write a function to call addTab when pressed cmd + t
+	$effect(() => {
+		document.addEventListener('keydown', (event: KeyboardEvent) => {
+			if (event.key === 't' && event.metaKey) {
+				addTab();
+			}
+		});
+	});
 
-	// Tab related operations
+	import type { ColumnDef, RowData } from '@tanstack/table-core';
+
+	// Active tab properties
+	let tabID = $state(0);
+	let tabName = $state('');
+	let editor = $state('');
+
+	let columns = $state<ColumnDef<RowData, unknown>[]>([]);
+	let rows = $state<RowData[]>([]);
+
+	onMount(() => {
+		getAllTabs();
+	});
+
 	function getAllTabs() {
 		GetAllTabs().then((tabs) => {
 			if (!tabs) {
@@ -97,18 +112,10 @@
 		rows = [];
 	}
 
-	// Write a function to call addTab when pressed cmd + t
-	$effect(() => {
-		document.addEventListener('keydown', (event: KeyboardEvent) => {
-			if (event.key === 't' && event.metaKey) {
-				addTab();
-			}
-		});
-	});
-
 	function addTab() {
+		queryLoading = false;
 		// Send default values for now in activeDBID and activeDB
-		AddTab(activePoolID, selectedDBDisplay, currentColor).then((tab) => {
+		AddTab($activePoolID, $selectedDBDisplay, $currentColor).then((tab) => {
 			tabsMap.set(tab.ID, tab);
 
 			tabID = tab.ID;
@@ -116,9 +123,9 @@
 			editor = tab.Editor;
 		});
 
-		selectedDBDisplay = selectedDBDisplay;
-		activePoolID = activePoolID;
-		currentColor = currentColor;
+		$selectedDBDisplay = $selectedDBDisplay;
+		$activePoolID = $activePoolID;
+		$currentColor = $currentColor;
 
 		columns = [];
 		rows = [];
@@ -134,9 +141,9 @@
 				tabName = tab.Name;
 				editor = tab.Editor;
 
-				selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
-				activePoolID = tab.ActiveDBID || '';
-				currentColor = tab.ActiveDBColor || '';
+				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+				$activePoolID = tab.ActiveDBID || '';
+				$currentColor = tab.ActiveDBColor || '';
 
 				// Update columns
 				for (const column of tab.columns) {
@@ -170,9 +177,9 @@
 			tabName = tab.Name;
 			editor = tab.Editor;
 
-			selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
-			activePoolID = tab.ActiveDBID || '';
-			currentColor = tab.ActiveDBColor || '';
+			$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+			$activePoolID = tab.ActiveDBID || '';
+			$currentColor = tab.ActiveDBColor || '';
 
 			// Update columns
 			for (const column of tab.columns) {
@@ -197,10 +204,6 @@
 		rows = [];
 	}
 
-	let selectedDBDisplay = $state('Connect to a database');
-	let currentColor = $state('');
-	let activePoolID = $state('');
-
 	function getColorClass(color: string): string {
 		const colorMap: Record<string, string> = {
 			'bg-purple-500': 'bg-purple-500',
@@ -219,19 +222,13 @@
 	import { toast } from 'svelte-sonner';
 	import { ExecuteQuery } from '$lib/wailsjs/go/app/Connections.js';
 
-	let selectedText = $state('');
-
-	// Table
-	import type { ColumnDef, RowData } from '@tanstack/table-core';
-
 	import DataTable from './data-table.svelte';
 
-	let columns = $state<ColumnDef<RowData, unknown>[]>([]);
-
-	let rows = $state<RowData[]>([]);
+	let queryLoading = $state(false);
 
 	function executeQuery() {
-		if (selectedText.trim() == '') {
+		queryLoading = true;
+		if ($selectedQuery.trim() == '') {
 			toast.error('Please select a query to execute', {
 				action: {
 					label: 'OK',
@@ -240,7 +237,7 @@
 			});
 			return;
 		}
-		if (activePoolID == '') {
+		if ($activePoolID == '') {
 			toast.error('Please select a database to execute the query', {
 				action: {
 					label: 'OK',
@@ -250,9 +247,10 @@
 			return;
 		}
 		// Execute query
-		ExecuteQuery(activePoolID, selectedText, tabID)
+		ExecuteQuery($activePoolID, $selectedQuery, tabID)
 			.then((result) => {
 				if (!result.ok) {
+					queryLoading = false;
 					toast.error('Query Failed', {
 						description: result.message,
 						action: {
@@ -282,6 +280,7 @@
 				}
 			})
 			.catch((error) => {
+				queryLoading = false;
 				// Handle errors from the ExecuteQuery call
 				toast.error('Query Failed', {
 					description: error,
@@ -318,18 +317,18 @@
 	document.addEventListener('keydown', handleKeyDown);
 
 	$effect(() => {
-		if (activeDBs.length == 0) {
-			selectedDBDisplay = 'Connect to a database';
-			currentColor = '';
+		if ($activeDBs.length == 0) {
+			$selectedDBDisplay = 'Connect to a database';
+			$currentColor = '';
 		}
 	});
 
 	function selectActiveDB(activeDBDisplay: string, poolID: string, activeDBColor: string) {
-		selectedDBDisplay = activeDBDisplay;
-		activePoolID = poolID;
-		currentColor = activeDBColor;
+		$selectedDBDisplay = activeDBDisplay;
+		$activePoolID = poolID;
+		$currentColor = activeDBColor;
 
-		SaveActiveDBProps(tabID, activePoolID, activeDBDisplay, activeDBColor);
+		SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
 	}
 </script>
 
@@ -375,14 +374,14 @@
 							<Select.Root type="single" name="activeDatabase">
 								<Select.Trigger
 									class="{getColorClass(
-										currentColor
+										$currentColor
 									)} prevent:default w-auto bg-opacity-20 hover:bg-opacity-25"
 								>
-									{selectedDBDisplay}
+									{$selectedDBDisplay}
 								</Select.Trigger>
 								<Select.Content>
 									<Select.Group>
-										{#each activeDBs as activeDB}
+										{#each $activeDBs as activeDB}
 											<Select.Item
 												onclick={() =>
 													selectActiveDB(
@@ -411,7 +410,11 @@
 								minSize={10}
 								class="rsz-pane my-3 overflow-hidden rounded-md border"
 							>
-								<SqlEditor bind:value={editor} bind:selectedText {suggestions} />
+								<SqlEditor
+									bind:value={editor}
+									bind:selectedQuery={$selectedQuery}
+									bind:suggestions={$suggestions}
+								/>
 							</Resizable.Pane>
 
 							<Resizable.ResizableHandle withHandle />
@@ -424,7 +427,15 @@
 							>
 								<div class="h-full overflow-auto">
 									{#if columns.length > 0}
-										<DataTable data={rows} {columns} />
+										<DataTable data={rows} {columns} {queryLoading} />
+									{:else if queryLoading}
+										<Skeleton class="my-3 h-[40px] w-full" />
+										<Skeleton class="my-3 h-[40px] w-full" />
+										<Skeleton class="my-3 h-[40px] w-full" />
+										<Skeleton class="my-3 h-[40px] w-full" />
+										<Skeleton class="my-3 h-[40px] w-full" />
+										<Skeleton class="my-3 h-[40px] w-full" />
+										<Skeleton class="my-3 h-[40px] w-full" />
 									{/if}
 								</div>
 							</Resizable.Pane>

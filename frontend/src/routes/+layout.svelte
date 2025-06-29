@@ -14,8 +14,9 @@
 	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { GetPostgresConnections } from '$lib/wailsjs/go/app/Connections';
+	import { GetAllTabs } from '$lib/wailsjs/go/app/Tabs';
 
-	import { postgresConnectionsMap, connectionDatabasesMap, databasesMap } from '$lib/state.svelte';
+	import { postgresConnectionsMap } from '$lib/state.svelte';
 
 	// Fetch all connections when the root layout is mounted
 	// This is mounted only for the root layout, so it will only run once

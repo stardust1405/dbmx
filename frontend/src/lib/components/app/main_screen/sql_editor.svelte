@@ -9,10 +9,10 @@
 
 	let {
 		value = $bindable(),
-		selectedText = $bindable(),
+		selectedQuery = $bindable(),
 		height = '100%',
 		width = '100%',
-		suggestions = []
+		suggestions = $bindable([])
 	} = $props();
 
 	// This effect will run whenever the value changes from outside
@@ -140,7 +140,7 @@
 			]);
 
 			// Get content from the selection
-			selectedText = model.getValueInRange(selection).trim();
+			selectedQuery = model.getValueInRange(selection).trim();
 		});
 
 		// Select the query when cursor is placed on it using arrow keys
@@ -203,7 +203,7 @@
 				}
 			]);
 
-			selectedText = model.getValueInRange(selection).trim();
+			selectedQuery = model.getValueInRange(selection).trim();
 		});
 
 		// Update value when editor content changes
@@ -251,7 +251,7 @@
 	function handleSelection() {
 		const selection = window.getSelection();
 		if (selection && selection.toString().trim() !== '') {
-			selectedText = selection.toString().trim();
+			selectedQuery = selection.toString().trim();
 		}
 	}
 </script>
