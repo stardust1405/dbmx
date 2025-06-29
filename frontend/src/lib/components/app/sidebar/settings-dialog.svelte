@@ -4,8 +4,8 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
 	import Lock from 'lucide-svelte/icons/lock';
-	import Label from './ui/label/label.svelte';
-	import Input from './ui/input/input.svelte';
+	import Label from '../../ui/label/label.svelte';
+	import Input from '../../ui/input/input.svelte';
 	import { AddPostgresConnection, TestConnectPostgres } from '$lib/wailsjs/go/app/Connections';
 	import { model } from '$lib/wailsjs/go/models';
 	import { toast } from 'svelte-sonner';

@@ -47,6 +47,11 @@
 				<span>DBMX</span>
 				<Command.Shortcut>⌘P</Command.Shortcut>
 			</Command.Item>
+			<Command.Item onSelect={() => goToRoute('/connections')}>
+				<TerminalIcon class="mr-2 size-4" />
+				<span>Connections</span>
+				<Command.Shortcut>⌘C</Command.Shortcut>
+			</Command.Item>
 			<Command.Item onSelect={() => goToRoute('/user')}>
 				<UserIcon class="mr-2 size-4" />
 				<span>User</span>
