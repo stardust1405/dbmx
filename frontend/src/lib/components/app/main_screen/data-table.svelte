@@ -12,9 +12,10 @@
 	type DataTableProps<TData, TValue> = {
 		columns: ColumnDef<TData, TValue>[];
 		data: TData[];
+		queryLoading: boolean;
 	};
 
-	let { data, columns }: DataTableProps<TData, TValue> = $props();
+	let { data, columns, queryLoading }: DataTableProps<TData, TValue> = $props();
 
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
 
@@ -38,6 +39,7 @@
 		getCoreRowModel: getCoreRowModel(),
 		getPaginationRowModel: getPaginationRowModel()
 	});
+	queryLoading = false;
 </script>
 
 <div>
@@ -46,7 +48,7 @@
 			<Table.Header>
 				{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
 					<Table.Row>
-						{#each headerGroup.headers as header (header.id)}
+						{#each headerGroup.headers as header (header.index)}
 							<Table.Head>
 								{#if !header.isPlaceholder}
 									<FlexRender

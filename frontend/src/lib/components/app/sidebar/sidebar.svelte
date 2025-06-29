@@ -13,8 +13,7 @@
 	import Table2 from 'lucide-svelte/icons/table-2';
 	import RefreshCw from 'lucide-svelte/icons/refresh-cw';
 	import SettingsDialog from '$lib/components/app/sidebar/settings-dialog.svelte';
-	import { type ComponentProps, getContext } from 'svelte';
-	import { SvelteMap } from 'svelte/reactivity';
+	import { type ComponentProps } from 'svelte';
 	import * as ContextMenu from '$lib/components/ui/context-menu/index.js';
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
@@ -24,7 +23,9 @@
 		connectionDatabasesMap,
 		databasesMap,
 		loadingMap,
-		dbLoadingMap
+		dbLoadingMap,
+		activeDBs,
+		suggestions
 	} from '$lib/state.svelte';
 
 	import {
@@ -37,7 +38,6 @@
 	import Button from '$lib/components/ui/button/button.svelte';
 	import { toast } from 'svelte-sonner';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
-	import { addActiveDB, removeActiveDB } from '$lib/components/app/main_screen/tabs.svelte.ts';
 
 	const refresh = () => {
 		GetPostgresConnections()
@@ -84,7 +84,10 @@
 			.then((db) => {
 				dbLoadingMap.set(dbID, false);
 				databasesMap.set(db.ID, db);
-				addActiveDB(db);
+
+				$activeDBs.push(db);
+				$suggestions.push(...db.Tables);
+				$suggestions.push(...db.Columns);
 
 				toast.success('Connected to ' + db.Name, {});
 			})
@@ -115,7 +118,10 @@
 				for (let db of dbs) {
 					databasesMap.set(db.ID, db);
 					if (db.IsActive) {
-						addActiveDB(db);
+						$activeDBs.push(db);
+						$suggestions.push(...db.Tables);
+						$suggestions.push(...db.Columns);
+
 						toast.success('Connected to ' + db.Name, {});
 					}
 				}
@@ -179,7 +185,18 @@
 		TerminatePostgresDatabaseConnection(db.PoolID)
 			.then((success) => {
 				if (success) {
-					removeActiveDB(dbID, db.Tables, db.Columns);
+					$activeDBs.splice(
+						$activeDBs.findIndex((db) => db.ID === dbID),
+						1
+					); // Use splice to remove the item
+					$suggestions.splice(
+						$suggestions.findIndex((table) => db.Tables.includes(table)),
+						db.Tables.length
+					);
+					$suggestions.splice(
+						$suggestions.findIndex((column) => db.Columns.includes(column)),
+						db.Columns.length
+					);
 					db.IsActive = false;
 					db.Tables = [];
 					db.Columns = [];
