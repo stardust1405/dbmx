@@ -19,16 +19,13 @@
 
 	let { ref = $bindable(null), ...restProps }: ComponentProps<typeof Sidebar.Root> = $props();
 
-	// let postgresConnections: Array<model.PostgresConnection> = $state([]);
-	let postgresConnectionsMap = $state<SvelteMap<number, model.PostgresConnection>>(
-		new SvelteMap<number, model.PostgresConnection>()
-	);
-	let connectionDatabasesMap = $state<SvelteMap<number, string[]>>(
-		new SvelteMap<number, string[]>()
-	);
-	let databasesMap = $state<SvelteMap<string, model.Database>>(
-		new SvelteMap<string, model.Database>()
-	);
+	import {
+		postgresConnectionsMap,
+		connectionDatabasesMap,
+		databasesMap,
+		loadingMap,
+		dbLoadingMap
+	} from '$lib/state.svelte';
 
 	import {
 		EstablishPostgresConnection,
@@ -41,25 +38,6 @@
 	import { toast } from 'svelte-sonner';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
 	import { addActiveDB, removeActiveDB } from '$lib/components/app/main_screen/tabs.svelte.ts';
-
-	onMount(() => {
-		GetPostgresConnections()
-			.then((connections) => {
-				for (let connection of connections) {
-					postgresConnectionsMap.set(connection.ID, connection);
-				}
-			})
-			.catch((error) => {
-				// Handle errors from the EstablishPostgresDatabaseConnection call
-				toast.error('Connection Failed', {
-					description: error,
-					action: {
-						label: 'OK',
-						onClick: () => console.info('OK')
-					}
-				});
-			});
-	});
 
 	const refresh = () => {
 		GetPostgresConnections()
@@ -79,9 +57,6 @@
 				});
 			});
 	};
-
-	let loadingMap = $state<SvelteMap<number, boolean>>(new SvelteMap<number, boolean>());
-	let dbLoadingMap = $state<SvelteMap<string, boolean>>(new SvelteMap<string, boolean>());
 
 	function establishDatabaseConnection(id: number, dbID: string) {
 		let db = databasesMap.get(dbID);

@@ -10,7 +10,34 @@
 	import BotIcon from '@lucide/svelte/icons/bot';
 	import * as Command from '$lib/components/ui/command/index.js';
 
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { toast } from 'svelte-sonner';
+	import { GetPostgresConnections } from '$lib/wailsjs/go/app/Connections';
+
+	import { postgresConnectionsMap, connectionDatabasesMap, databasesMap } from '$lib/state.svelte';
+
+	// Fetch all connections when the root layout is mounted
+	// This is mounted only for the root layout, so it will only run once
+	// This will also run when the app is reloaded
+	onMount(() => {
+		GetPostgresConnections()
+			.then((connections) => {
+				for (let connection of connections) {
+					postgresConnectionsMap.set(connection.ID, connection);
+				}
+			})
+			.catch((error) => {
+				// Handle errors from the EstablishPostgresDatabaseConnection call
+				toast.error('Connection Failed', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
+	});
 
 	function goToRoute(route: string) {
 		goto(route);
