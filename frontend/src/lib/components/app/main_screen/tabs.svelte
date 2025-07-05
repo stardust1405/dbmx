@@ -182,41 +182,51 @@
 	}
 
 	function setActiveTab(id: number) {
-		SetActiveTab(id).then((tab) => {
-			tabsMap.set(tab.ID, tab);
+		SetActiveTab(id)
+			.then((tab) => {
+				tabsMap.set(tab.ID, tab);
 
-			tabID = tab.ID;
-			tabName = tab.Name;
-			editor = tab.Editor;
+				tabID = tab.ID;
+				tabName = tab.Name;
+				editor = tab.Editor;
 
-			if ($activeDBs.length == 0) {
-				$selectedDBDisplay = 'Connect to a database';
-				$currentColor = '';
-				$activePoolID = '';
-			} else {
-				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
-				$activePoolID = tab.ActiveDBID || '';
-				$currentColor = tab.ActiveDBColor || '';
-			}
-
-			// Update columns
-			for (const column of tab.columns) {
-				columns.push({
-					accessorKey: column,
-					header: column
-				});
-			}
-
-			for (const row of tab.rows) {
-				let cell: Record<string, any> = {};
-				for (const resultCell of row) {
-					if (resultCell.column && resultCell.value) {
-						cell[resultCell.column] = resultCell.value;
-					}
+				if ($activeDBs.length == 0) {
+					$selectedDBDisplay = 'Connect to a database';
+					$currentColor = '';
+					$activePoolID = '';
+				} else {
+					$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+					$activePoolID = tab.ActiveDBID || '';
+					$currentColor = tab.ActiveDBColor || '';
 				}
-				rows.push(cell);
-			}
-		});
+
+				// Update columns
+				for (const column of tab.columns) {
+					columns.push({
+						accessorKey: column,
+						header: column
+					});
+				}
+
+				for (const row of tab.rows) {
+					let cell: Record<string, any> = {};
+					for (const resultCell of row) {
+						if (resultCell.column && resultCell.value) {
+							cell[resultCell.column] = resultCell.value;
+						}
+					}
+					rows.push(cell);
+				}
+			})
+			.catch((error) => {
+				toast.error('Failed to set active tab', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
 
 		columns = [];
 		rows = [];

@@ -75,6 +75,10 @@ func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
 		return nil, err
 	}
 
+	if tab.Output == "" {
+		return &tab, nil
+	}
+
 	var output model.Output
 	err = json.Unmarshal([]byte(tab.Output), &output)
 	if err != nil {
