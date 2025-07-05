@@ -2,17 +2,19 @@ package main
 
 import (
 	"context"
+	"dbmx/app"
 	"fmt"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx  context.Context
+	conn *app.Connections
 }
 
 // NewApp creates a new App application struct
-func NewApp() *App {
-	return &App{}
+func NewApp(conn *app.Connections) *App {
+	return &App{conn: conn}
 }
 
 // startup is called when the app starts. The context is saved
@@ -36,6 +38,10 @@ func (a *App) beforeClose(ctx context.Context) (prevent bool) {
 
 // shutdown is called at application termination
 func (a *App) shutdown(ctx context.Context) {
+	err := a.conn.TerminateAllDatabaseConnections()
+	if err != nil {
+		fmt.Println("Error terminating database connections:", err)
+	}
 	// Perform your teardown here
 }
 
