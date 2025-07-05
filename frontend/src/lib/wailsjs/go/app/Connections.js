@@ -42,6 +42,10 @@ export function RefreshPostgresDatabase(arg1, arg2, arg3, arg4) {
   return window['go']['app']['Connections']['RefreshPostgresDatabase'](arg1, arg2, arg3, arg4);
 }
 
+export function TerminateAllDatabaseConnections() {
+  return window['go']['app']['Connections']['TerminateAllDatabaseConnections']();
+}
+
 export function TerminatePostgresDatabaseConnection(arg1) {
   return window['go']['app']['Connections']['TerminatePostgresDatabaseConnection'](arg1);
 }

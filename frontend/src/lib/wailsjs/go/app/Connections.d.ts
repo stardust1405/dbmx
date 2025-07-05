@@ -23,6 +23,8 @@ export function GetSqlite3Version():Promise<string>;
 
 export function RefreshPostgresDatabase(arg1:number,arg2:string,arg3:string,arg4:string):Promise<model.Database>;
 
+export function TerminateAllDatabaseConnections():Promise<void>;
+
 export function TerminatePostgresDatabaseConnection(arg1:string):Promise<boolean>;
 
 export function TestConnectPostgres(arg1:model.PostgresConnection):Promise<boolean>;

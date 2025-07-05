@@ -398,6 +398,44 @@ func (c *Connections) TerminatePostgresDatabaseConnection(activePoolID string) (
 	return true, nil
 }
 
+func (c *Connections) TerminateAllDatabaseConnections() error {
+	c.PM.mu.Lock()
+	defer c.PM.mu.Unlock()
+
+	activeDBIds := []string{}
+
+	for id, pool := range c.PM.Pools {
+		activeDBIds = append(activeDBIds, id.String())
+		pool.Close()
+		delete(c.PM.Pools, id)
+	}
+
+	// Build placeholders (?, ?, ?)
+	placeholders := strings.Repeat("?,", len(activeDBIds))
+	placeholders = strings.TrimRight(placeholders, ",")
+
+	// Remove the pool from all the tabs in which it's saved
+	// Construct the query
+	query := fmt.Sprintf(
+		"UPDATE tabs SET active_db_id = NULL, active_db = NULL, active_db_colour = NULL WHERE active_db_id IN (%s)",
+		placeholders,
+	)
+
+	// Convert []string to []interface{}
+	args := make([]interface{}, len(activeDBIds))
+	for i, v := range activeDBIds {
+		args[i] = v
+	}
+
+	// Execute the query with placeholders
+	_, err := c.DB.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Function to check if a query is a write operation
 func isWriteOperation(query string) bool {
 	// List of SQL keywords for write operations in lowercase

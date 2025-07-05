@@ -20,13 +20,10 @@ var assets embed.FS
 var icon []byte
 
 func main() {
-	// Get Env
-	// e := env.GetEnv()
-
 	// Create an instance of the app structure
-	app := NewApp()
 	db := database.NewSqlite3DB().DB
-	connections := c.NewConnections(db)
+	conn := c.NewConnections(db)
+	app := NewApp(conn)
 	tabs := c.NewTabs(db)
 
 	// Create application with options
@@ -59,7 +56,7 @@ func main() {
 		WindowStartState: options.Normal,
 		Bind: []interface{}{
 			app,
-			connections,
+			conn,
 			tabs,
 		},
 		// Mac platform specific options
