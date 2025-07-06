@@ -451,9 +451,9 @@
 							<Resizable.Pane
 								defaultSize={outputHeight}
 								minSize={10}
-								class="rsz-pane overflow-auto"
+								class="rsz-pane rounded-md border"
 							>
-								<div class="h-full overflow-auto">
+								<div class="h-full">
 									{#if columns.length > 0}
 										<DataTable data={rows} {columns} {queryLoading} />
 									{:else if queryLoading}
