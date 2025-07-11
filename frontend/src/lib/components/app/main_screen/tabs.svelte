@@ -455,7 +455,7 @@
 							>
 								<div class="h-full">
 									{#if columns.length > 0}
-										<DataTable data={rows} {columns} {queryLoading} />
+										<DataTable data={rows} {columns} {queryLoading} query={$selectedQuery} />
 									{:else if queryLoading}
 										<Skeleton class="my-3 h-[40px] w-full" />
 										<Skeleton class="my-3 h-[40px] w-full" />
