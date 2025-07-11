@@ -39,6 +39,7 @@
 	let columnFilters = $state<ColumnFiltersState>([]);
 	let rowSelection = $state<RowSelectionState>({});
 	let columnVisibility = $state<VisibilityState>({});
+	let editingCell = $state<string | null>(null);
 	const table = createSvelteTable({
 		get data() {
 			return data;
@@ -130,8 +131,34 @@
 					{#each table.getRowModel().rows as row (row.id)}
 						<Table.Row>
 							{#each row.getVisibleCells() as cell (cell.id)}
-								<Table.Cell>
-									<FlexRender content={cell.column.columnDef.cell} context={cell.getContext()} />
+								<Table.Cell
+									class="relative"
+									ondblclick={() => {
+										editingCell = cell.id;
+									}}
+								>
+									{#if editingCell === cell.id}
+										<Input
+											type="text"
+											value={cell.getValue()}
+											onblur={(e) => {
+												// @ts-expect-error - this is fine
+												data[cell.row.index][cell.column.id] = e.target.value;
+												editingCell = null;
+											}}
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													e.currentTarget.blur();
+												} else if (e.key === 'Escape') {
+													editingCell = null;
+												}
+											}}
+											class="bg-green-500 bg-opacity-30"
+											autofocus
+										/>
+									{:else}
+										<FlexRender content={cell.column.columnDef.cell} context={cell.getContext()} />
+									{/if}
 								</Table.Cell>
 							{/each}
 						</Table.Row>
@@ -159,7 +186,7 @@
 							() => `${table.getState().pagination.pageSize}`, (v) => table.setPageSize(Number(v))
 						}
 					>
-						<Select.Trigger size="sm" class="w-20" id="rows-per-page">
+						<Select.Trigger class="w-20" id="rows-per-page">
 							{table.getState().pagination.pageSize}
 						</Select.Trigger>
 						<Select.Content side="top">
