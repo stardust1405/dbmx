@@ -30,9 +30,10 @@
 		columns: ColumnDef<TData, TValue>[];
 		data: TData[];
 		queryLoading: boolean;
+		query: string;
 	};
 
-	let { data, columns, queryLoading }: DataTableProps<TData, TValue> = $props();
+	let { data, columns, queryLoading, query }: DataTableProps<TData, TValue> = $props();
 
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
 	let sorting = $state<SortingState>([]);
