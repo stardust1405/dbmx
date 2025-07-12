@@ -30,36 +30,19 @@
 		selectedQuery
 	} from '$lib/state.svelte';
 
+	import { toast } from 'svelte-sonner';
+	import { ExecuteQuery } from '$lib/wailsjs/go/app/Connections.js';
+
+	import DataTable from './data-table.svelte';
+
+	import type { ColumnDef, RowData } from '@tanstack/table-core';
+
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
 
+	let queryLoading = $state(false);
+
 	// Handle Tabs
-
-	// Call UpdateTabEditorContent on editor change
-	let editorUpdateTimer: number | undefined;
-	$effect(() => {
-		// Explicitly reference editor to ensure reactivity
-		const _ = editor;
-
-		// Clear any existing timeout to debounce rapid changes
-		if (editorUpdateTimer) clearTimeout(editorUpdateTimer);
-
-		// Set a new timeout to update the content after typing stops
-		editorUpdateTimer = setTimeout(() => {
-			UpdateTabEditorContent(tabID, editor);
-		}, 500);
-	});
-
-	// Write a function to call addTab when pressed cmd + t
-	$effect(() => {
-		document.addEventListener('keydown', (event: KeyboardEvent) => {
-			if (event.key === 't' && event.metaKey) {
-				addTab();
-			}
-		});
-	});
-
-	import type { ColumnDef, RowData } from '@tanstack/table-core';
 
 	// Active tab properties
 	let { tabID = $bindable(0), tabName = $bindable('') } = $props();
@@ -247,13 +230,6 @@
 		return colorMap[color] || '';
 	}
 
-	import { toast } from 'svelte-sonner';
-	import { ExecuteQuery } from '$lib/wailsjs/go/app/Connections.js';
-
-	import DataTable from './data-table.svelte';
-
-	let queryLoading = $state(false);
-
 	function executeQuery() {
 		queryLoading = true;
 		if ($selectedQuery.trim() == '') {
@@ -323,6 +299,7 @@
 		rows = [];
 	}
 
+	document.addEventListener('keydown', handleKeyDown);
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.altKey && event.key === 'Enter') {
 			event.preventDefault();
@@ -342,7 +319,13 @@
 		}
 	}
 
-	document.addEventListener('keydown', handleKeyDown);
+	function selectActiveDB(activeDBDisplay: string, poolID: string, activeDBColor: string) {
+		$selectedDBDisplay = activeDBDisplay;
+		$activePoolID = poolID;
+		$currentColor = activeDBColor;
+
+		SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
+	}
 
 	$effect(() => {
 		if ($activeDBs.length == 0) {
@@ -351,13 +334,29 @@
 		}
 	});
 
-	export function selectActiveDB(activeDBDisplay: string, poolID: string, activeDBColor: string) {
-		$selectedDBDisplay = activeDBDisplay;
-		$activePoolID = poolID;
-		$currentColor = activeDBColor;
+	// Call UpdateTabEditorContent on editor change
+	let editorUpdateTimer: number | undefined;
+	$effect(() => {
+		// Explicitly reference editor to ensure reactivity
+		const _ = editor;
 
-		SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
-	}
+		// Clear any existing timeout to debounce rapid changes
+		if (editorUpdateTimer) clearTimeout(editorUpdateTimer);
+
+		// Set a new timeout to update the content after typing stops
+		editorUpdateTimer = setTimeout(() => {
+			UpdateTabEditorContent(tabID, editor);
+		}, 500);
+	});
+
+	// Write a function to call addTab when pressed cmd + t
+	$effect(() => {
+		document.addEventListener('keydown', (event: KeyboardEvent) => {
+			if (event.key === 't' && event.metaKey) {
+				addTab();
+			}
+		});
+	});
 </script>
 
 <div class="flex h-full flex-1 flex-col overflow-hidden">
