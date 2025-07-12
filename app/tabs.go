@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"dbmx/model"
 	"encoding/json"
+
+	"github.com/pkg/errors"
 )
 
 type Tabs struct {
@@ -16,8 +18,10 @@ func NewTabs(db *sql.DB) *Tabs {
 	}
 }
 
-func (t *Tabs) AddTab(activeDBID, activeDB, activeDBColour string) (*model.Tab, error) {
+func (t *Tabs) AddTab(activeDBID, activeDB, activeDBColour, tableName, tabType string) (*model.Tab, error) {
 	var active_db_id, active_db, active_db_colour *string
+	name := "Editor"
+
 	if activeDBID != "" {
 		active_db_id = &activeDBID
 	}
@@ -27,10 +31,17 @@ func (t *Tabs) AddTab(activeDBID, activeDB, activeDBColour string) (*model.Tab, 
 	if activeDBColour != "" {
 		active_db_colour = &activeDBColour
 	}
+	if tableName != "" {
+		name = tableName
+	}
+
+	if !model.IsValidTabType(tabType) {
+		return nil, errors.New("invalid tab type. Only editor and table are allowed.")
+	}
 
 	// Insert a new active tab
-	query := `INSERT INTO tabs (name, editor, output, is_active, active_db_id, active_db, active_db_colour) VALUES ('SQL Editor', '', '', true, ?, ?, ?);`
-	result, err := t.DB.Exec(query, active_db_id, active_db, active_db_colour)
+	query := `INSERT INTO tabs (name, editor, output, is_active, active_db_id, active_db, active_db_colour, type) VALUES (?, '', '', true, ?, ?, ?, ?);`
+	result, err := t.DB.Exec(query, name, active_db_id, active_db, active_db_colour, tabType)
 	if err != nil {
 		return nil, err
 	}
@@ -48,13 +59,14 @@ func (t *Tabs) AddTab(activeDBID, activeDB, activeDBColour string) (*model.Tab, 
 
 	return &model.Tab{
 		ID:            insertedID,
-		Name:          "SQL Editor",
+		Name:          name,
 		Editor:        "",
 		Output:        "",
 		IsActive:      true,
 		ActiveDBID:    active_db_id,
 		ActiveDB:      active_db,
 		ActiveDBColor: active_db_colour,
+		Type:          tabType,
 	}, nil
 }
 
@@ -70,7 +82,7 @@ func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
 	updateQuery = `UPDATE tabs SET is_active = true WHERE id = ? RETURNING *`
 
 	var tab model.Tab
-	err = t.DB.QueryRow(updateQuery, id).Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor)
+	err = t.DB.QueryRow(updateQuery, id).Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +105,7 @@ func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
 
 func (t *Tabs) GetAllTabs() ([]model.Tab, error) {
 	// Query for all tabs
-	query := `SELECT id, name, editor, output, is_active, active_db_id, active_db, active_db_colour FROM tabs`
+	query := `SELECT id, name, editor, output, is_active, active_db_id, active_db, active_db_colour, type FROM tabs`
 	rows, err := t.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -103,7 +115,7 @@ func (t *Tabs) GetAllTabs() ([]model.Tab, error) {
 	var tabs []model.Tab
 	for rows.Next() {
 		var tab model.Tab
-		err := rows.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor)
+		err := rows.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type)
 		if err != nil {
 			return nil, err
 		}
@@ -158,7 +170,7 @@ func (t *Tabs) DeleteTab(id int64) (*model.Tab, error) {
 			query = `UPDATE tabs SET is_active = true WHERE id = (SELECT id FROM tabs WHERE id != ? LIMIT 1) RETURNING *`
 			row := t.DB.QueryRow(query, id)
 
-			err = row.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor)
+			err = row.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type)
 			if err != nil {
 				return nil, err
 			}
