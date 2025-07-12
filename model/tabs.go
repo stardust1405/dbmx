@@ -9,8 +9,19 @@ type Tab struct {
 	ActiveDBID    *string
 	ActiveDB      *string
 	ActiveDBColor *string
+	Type          string
 
 	// Output
 	Columns []string `json:"columns"`
 	Rows    [][]Cell `json:"rows"`
+}
+
+var validTypes = map[string]struct{}{
+	"editor": {},
+	"table":  {},
+}
+
+func IsValidTabType(t string) bool {
+	_, ok := validTypes[t]
+	return ok
 }

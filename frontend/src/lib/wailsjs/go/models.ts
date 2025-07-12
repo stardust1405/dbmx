@@ -151,6 +151,7 @@ export namespace model {
 	    ActiveDBID?: string;
 	    ActiveDB?: string;
 	    ActiveDBColor?: string;
+	    Type: string;
 	    columns: string[];
 	    rows: Cell[][];
 	
@@ -168,6 +169,7 @@ export namespace model {
 	        this.ActiveDBID = source["ActiveDBID"];
 	        this.ActiveDB = source["ActiveDB"];
 	        this.ActiveDBColor = source["ActiveDBColor"];
+	        this.Type = source["Type"];
 	        this.columns = source["columns"];
 	        this.rows = this.convertValues(source["rows"], Cell);
 	    }

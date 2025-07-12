@@ -6,11 +6,12 @@
 	// Active tab properties
 	let tabID = $state(0);
 	let tabName = $state('');
+	let tabType = $state('');
 </script>
 
 <Sidebar.Provider>
 	<AppSidebar bind:tabID bind:tabName />
 	<Sidebar.Inset>
-		<Tabs bind:tabID bind:tabName />
+		<Tabs bind:tabID bind:tabName bind:tabType />
 	</Sidebar.Inset>
 </Sidebar.Provider>

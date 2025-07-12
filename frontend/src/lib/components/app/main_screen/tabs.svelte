@@ -45,7 +45,7 @@
 	// Handle Tabs
 
 	// Active tab properties
-	let { tabID = $bindable(0), tabName = $bindable('') } = $props();
+	let { tabID = $bindable(0), tabName = $bindable(''), tabType = $bindable('') } = $props();
 	let editor = $state('');
 
 	let columns = $state<ColumnDef<RowData, unknown>[]>([]);
@@ -67,6 +67,7 @@
 				if (tab.IsActive) {
 					tabID = tab.ID;
 					tabName = tab.Name;
+					tabType = tab.Type;
 					editor = tab.Editor;
 
 					console.log($activeDBs.length);
@@ -110,11 +111,12 @@
 	function addTab() {
 		queryLoading = false;
 		// Send default values for now in activeDBID and activeDB
-		AddTab($activePoolID, $selectedDBDisplay, $currentColor).then((tab) => {
+		AddTab($activePoolID, $selectedDBDisplay, $currentColor, '', 'editor').then((tab) => {
 			tabsMap.set(tab.ID, tab);
 
 			tabID = tab.ID;
 			tabName = tab.Name;
+			tabType = tab.Type;
 			editor = tab.Editor;
 		});
 
@@ -134,6 +136,7 @@
 
 				tabID = tab.ID;
 				tabName = tab.Name;
+				tabType = tab.Type;
 				editor = tab.Editor;
 
 				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
@@ -171,6 +174,7 @@
 
 				tabID = tab.ID;
 				tabName = tab.Name;
+				tabType = tab.Type;
 				editor = tab.Editor;
 
 				if ($activeDBs.length == 0) {
@@ -394,82 +398,89 @@
 
 		{#if tabsMap.size > 0}
 			<!-- Main Content on screen -->
-			<div class="flex h-screen flex-1 flex-col px-4">
-				<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
-					<div class="flex h-full flex-col">
-						<div class="flex items-center justify-between">
-							<Select.Root type="single" name="activeDatabase">
-								<Select.Trigger
-									class="{getColorClass(
-										$currentColor
-									)} prevent:default w-auto bg-opacity-20 hover:bg-opacity-25"
-								>
-									{$selectedDBDisplay}
-								</Select.Trigger>
-								<Select.Content>
-									<Select.Group>
-										{#each $activeDBs as activeDB}
-											<Select.Item
-												onclick={() =>
-													selectActiveDB(
-														activeDB.PostgresConnectionName + ' - ' + activeDB.Name,
-														activeDB.PoolID,
-														activeDB.Colour
-													)}
-												class="{getColorClass(activeDB.Colour)} bg-opacity-20 hover:bg-opacity-25"
-												value={activeDB.ID}
-												label={activeDB.Name}
-												>{activeDB.PostgresConnectionName} - {activeDB.Name}</Select.Item
-											>
-										{/each}
-									</Select.Group>
-								</Select.Content>
-							</Select.Root>
-							<div class="flex">
-								<Button variant="default" size="sm" onclick={executeQuery}>Execute Query</Button>
-							</div>
-						</div>
 
-						<Resizable.ResizablePaneGroup direction="vertical" class="h-full">
-							<!-- SQL Editor Pane -->
-							<Resizable.Pane
-								defaultSize={editorHeight}
-								minSize={10}
-								class="rsz-pane my-3 overflow-hidden rounded-md border"
-							>
-								<SqlEditor
-									bind:value={editor}
-									bind:selectedQuery={$selectedQuery}
-									bind:suggestions={$suggestions}
-								/>
-							</Resizable.Pane>
-
-							<Resizable.ResizableHandle withHandle />
-
-							<!-- Output Pane -->
-							<Resizable.Pane
-								defaultSize={outputHeight}
-								minSize={10}
-								class="rsz-pane rounded-md border"
-							>
-								<div class="h-full">
-									{#if columns.length > 0}
-										<DataTable data={rows} {columns} {queryLoading} query={$selectedQuery} />
-									{:else if queryLoading}
-										<Skeleton class="my-3 h-[40px] w-full" />
-										<Skeleton class="my-3 h-[40px] w-full" />
-										<Skeleton class="my-3 h-[40px] w-full" />
-										<Skeleton class="my-3 h-[40px] w-full" />
-										<Skeleton class="my-3 h-[40px] w-full" />
-										<Skeleton class="my-3 h-[40px] w-full" />
-										<Skeleton class="my-3 h-[40px] w-full" />
-									{/if}
+			{#if tabType == 'table'}
+				<h1>Table View</h1>
+			{:else}
+				<div class="flex h-screen flex-1 flex-col px-4">
+					<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
+						<div class="flex h-full flex-col">
+							<!-- Active DB Selector and Execute Query Button -->
+							<div class="flex items-center justify-between">
+								<Select.Root type="single" name="activeDatabase">
+									<Select.Trigger
+										class="{getColorClass(
+											$currentColor
+										)} prevent:default w-auto bg-opacity-20 hover:bg-opacity-25"
+									>
+										{$selectedDBDisplay}
+									</Select.Trigger>
+									<Select.Content>
+										<Select.Group>
+											{#each $activeDBs as activeDB}
+												<Select.Item
+													onclick={() =>
+														selectActiveDB(
+															activeDB.PostgresConnectionName + ' - ' + activeDB.Name,
+															activeDB.PoolID,
+															activeDB.Colour
+														)}
+													class="{getColorClass(activeDB.Colour)} bg-opacity-20 hover:bg-opacity-25"
+													value={activeDB.ID}
+													label={activeDB.Name}
+													>{activeDB.PostgresConnectionName} - {activeDB.Name}</Select.Item
+												>
+											{/each}
+										</Select.Group>
+									</Select.Content>
+								</Select.Root>
+								<div class="flex">
+									<Button variant="default" size="sm" onclick={executeQuery}>Execute Query</Button>
 								</div>
-							</Resizable.Pane>
-						</Resizable.ResizablePaneGroup>
-					</div>
-				</Tabs.Content>
-			</div>
+							</div>
+
+							<!-- Resizable Panes for Editor and Output -->
+							<Resizable.ResizablePaneGroup direction="vertical" class="h-full">
+								<!-- SQL Editor Pane -->
+								<Resizable.Pane
+									defaultSize={editorHeight}
+									minSize={10}
+									class="rsz-pane my-3 overflow-hidden rounded-md border"
+								>
+									<SqlEditor
+										bind:value={editor}
+										bind:selectedQuery={$selectedQuery}
+										bind:suggestions={$suggestions}
+									/>
+								</Resizable.Pane>
+
+								<Resizable.ResizableHandle withHandle />
+
+								<!-- Output Pane -->
+								<Resizable.Pane
+									defaultSize={outputHeight}
+									minSize={10}
+									class="rsz-pane rounded-md border"
+								>
+									<div class="h-full">
+										{#if columns.length > 0}
+											<DataTable data={rows} {columns} {queryLoading} query={$selectedQuery} />
+										{:else if queryLoading}
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+										{/if}
+									</div>
+								</Resizable.Pane>
+							</Resizable.ResizablePaneGroup>
+						</div>
+					</Tabs.Content>
+				</div>
+			{/if}
 		{/if}
 	</Tabs.Root>
 </div>
