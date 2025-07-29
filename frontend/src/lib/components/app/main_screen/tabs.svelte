@@ -34,8 +34,7 @@
 	import { ExecuteQuery } from '$lib/wailsjs/go/app/Connections.js';
 
 	import DataTable from './data-table.svelte';
-
-	import type { ColumnDef, RowData } from '@tanstack/table-core';
+	import { columns, rows } from '$lib/state.svelte';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
@@ -47,9 +46,6 @@
 	// Active tab properties
 	let { tabID = $bindable(0), tabName = $bindable(''), tabType = $bindable('') } = $props();
 	let editor = $state('');
-
-	let columns = $state<ColumnDef<RowData, unknown>[]>([]);
-	let rows = $state<RowData[]>([]);
 
 	onMount(() => {
 		getAllTabs();
@@ -70,14 +66,11 @@
 					tabType = tab.Type;
 					editor = tab.Editor;
 
-					console.log($activeDBs.length);
-
 					if ($activeDBs.length == 0) {
 						$selectedDBDisplay = 'Connect to a database';
 						$currentColor = '';
 						$activePoolID = '';
 					} else {
-						console.log('in else', tab.ActiveDB);
 						$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
 						$activePoolID = tab.ActiveDBID || '';
 						$currentColor = tab.ActiveDBColor || '';
@@ -85,10 +78,13 @@
 
 					// Update columns
 					for (const column of tab.columns) {
-						columns.push({
-							accessorKey: column,
-							header: column
-						});
+						columns.set([
+							...$columns,
+							{
+								accessorKey: column,
+								header: column
+							}
+						]);
 					}
 
 					for (const row of tab.rows) {
@@ -98,14 +94,14 @@
 								cell[resultCell.column] = resultCell.value;
 							}
 						}
-						rows.push(cell);
+						rows.set([...$rows, cell]);
 					}
 				}
 			}
 		});
 
-		columns = [];
-		rows = [];
+		columns.set([]);
+		rows.set([]);
 	}
 
 	function addTab() {
@@ -124,8 +120,8 @@
 		$activePoolID = $activePoolID;
 		$currentColor = $currentColor;
 
-		columns = [];
-		rows = [];
+		columns.set([]);
+		rows.set([]);
 	}
 
 	function deleteTab(id: number) {
@@ -145,10 +141,13 @@
 
 				// Update columns
 				for (const column of tab.columns) {
-					columns.push({
-						accessorKey: column,
-						header: column
-					});
+					columns.set([
+						...$columns,
+						{
+							accessorKey: column,
+							header: column
+						}
+					]);
 				}
 
 				for (const row of tab.rows) {
@@ -158,13 +157,13 @@
 							cell[resultCell.column] = resultCell.value;
 						}
 					}
-					rows.push(cell);
+					rows.set([...$rows, cell]);
 				}
 			}
 		});
 
-		columns = [];
-		rows = [];
+		columns.set([]);
+		rows.set([]);
 	}
 
 	function setActiveTab(id: number) {
@@ -189,10 +188,13 @@
 
 				// Update columns
 				for (const column of tab.columns) {
-					columns.push({
-						accessorKey: column,
-						header: column
-					});
+					columns.set([
+						...$columns,
+						{
+							accessorKey: column,
+							header: column
+						}
+					]);
 				}
 
 				for (const row of tab.rows) {
@@ -202,7 +204,7 @@
 							cell[resultCell.column] = resultCell.value;
 						}
 					}
-					rows.push(cell);
+					rows.set([...$rows, cell]);
 				}
 			})
 			.catch((error) => {
@@ -215,8 +217,8 @@
 				});
 			});
 
-		columns = [];
-		rows = [];
+		columns.set([]);
+		rows.set([]);
 	}
 
 	function getColorClass(color: string): string {
@@ -271,10 +273,13 @@
 
 				// Update columns
 				for (const column of result.columns) {
-					columns.push({
-						accessorKey: column,
-						header: column
-					});
+					columns.set([
+						...$columns,
+						{
+							accessorKey: column,
+							header: column
+						}
+					]);
 				}
 
 				for (const row of result.rows) {
@@ -284,7 +289,7 @@
 							cell[resultCell.column] = resultCell.value;
 						}
 					}
-					rows.push(cell);
+					rows.set([...$rows, cell]);
 				}
 			})
 			.catch((error) => {
@@ -299,8 +304,8 @@
 				});
 			});
 
-		columns = [];
-		rows = [];
+		columns.set([]);
+		rows.set([]);
 	}
 
 	document.addEventListener('keydown', handleKeyDown);
@@ -463,8 +468,13 @@
 									class="rsz-pane rounded-md border"
 								>
 									<div class="h-full">
-										{#if columns.length > 0}
-											<DataTable data={rows} {columns} {queryLoading} query={$selectedQuery} />
+										{#if $columns.length > 0}
+											<DataTable
+												data={$rows}
+												columns={$columns}
+												{queryLoading}
+												query={$selectedQuery}
+											/>
 										{:else if queryLoading}
 											<Skeleton class="my-3 h-[40px] w-full" />
 											<Skeleton class="my-3 h-[40px] w-full" />
