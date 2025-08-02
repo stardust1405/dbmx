@@ -4,6 +4,7 @@ import { writable } from 'svelte/store';
 
 import type { ColumnDef, RowData } from '@tanstack/table-core';
 
+// Columns and rows for the query output data table
 export let columns = writable<ColumnDef<RowData, unknown>[]>([]);
 export let rows = writable<RowData[]>([]);
 
@@ -26,7 +27,7 @@ export let selectedQuery = writable('');
 
 export let activeDBs = writable<Array<model.Database>>([]);
 
-export let suggestions = writable<Array<string>>([
+export let suggestions = writable<Set<string>>(new Set([
     'SELECT',
     'FROM',
     'WHERE',
@@ -67,4 +68,4 @@ export let suggestions = writable<Array<string>>([
     'EXPLAIN DEBUG',
     'EXPLAIN TRIGGER',
     'SET'
-]);
+]));

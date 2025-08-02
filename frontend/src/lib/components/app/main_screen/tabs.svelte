@@ -76,6 +76,84 @@
 						$currentColor = tab.ActiveDBColor || '';
 					}
 
+					if (tab.rows && tab.columns) {
+						// Update columns
+						for (const column of tab.columns) {
+							columns.set([
+								...$columns,
+								{
+									accessorKey: column,
+									header: column
+								}
+							]);
+						}
+
+						for (const row of tab.rows) {
+							let cell: Record<string, any> = {};
+							for (const resultCell of row) {
+								if (resultCell.column && resultCell.value) {
+									cell[resultCell.column] = resultCell.value;
+								}
+							}
+							rows.set([...$rows, cell]);
+						}
+					}
+				}
+			}
+		});
+
+		columns.set([]);
+		rows.set([]);
+	}
+
+	export function addTab(tableName: string = '') {
+		var tableType = 'editor';
+		var tabDisplayName = 'Editor';
+		if (tableName.trim() != '') {
+			tableType = 'table';
+			tabDisplayName = tableName;
+		}
+		// Send default values for now in activeDBID and activeDB
+		AddTab($activePoolID, $selectedDBDisplay, $currentColor, tabDisplayName, tableType).then(
+			(tab) => {
+				queryLoading = false;
+				tabsMap.set(tab.ID, tab);
+
+				tabID = tab.ID;
+				tabName = tab.Name;
+				tabType = tab.Type;
+				editor = tab.Editor;
+			}
+		);
+
+		$selectedDBDisplay = $selectedDBDisplay;
+		$activePoolID = $activePoolID;
+		$currentColor = $currentColor;
+
+		columns.set([]);
+		rows.set([]);
+	}
+
+	function deleteTab(id: number) {
+		// Delete the old tab from the map
+		tabsMap.delete(id);
+		DeleteTab(id).then((tab) => {
+			if (tab) {
+				queryLoading = false;
+
+				// Set the new tab as active
+				tabsMap.set(tab.ID, tab);
+
+				tabID = tab.ID;
+				tabName = tab.Name;
+				tabType = tab.Type;
+				editor = tab.Editor;
+
+				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+				$activePoolID = tab.ActiveDBID || '';
+				$currentColor = tab.ActiveDBColor || '';
+
+				if (tab.rows && tab.columns) {
 					// Update columns
 					for (const column of tab.columns) {
 						columns.set([
@@ -104,71 +182,10 @@
 		rows.set([]);
 	}
 
-	function addTab() {
-		queryLoading = false;
-		// Send default values for now in activeDBID and activeDB
-		AddTab($activePoolID, $selectedDBDisplay, $currentColor, '', 'editor').then((tab) => {
-			tabsMap.set(tab.ID, tab);
-
-			tabID = tab.ID;
-			tabName = tab.Name;
-			tabType = tab.Type;
-			editor = tab.Editor;
-		});
-
-		$selectedDBDisplay = $selectedDBDisplay;
-		$activePoolID = $activePoolID;
-		$currentColor = $currentColor;
-
-		columns.set([]);
-		rows.set([]);
-	}
-
-	function deleteTab(id: number) {
-		tabsMap.delete(id);
-		DeleteTab(id).then((tab) => {
-			if (tab) {
-				tabsMap.set(tab.ID, tab);
-
-				tabID = tab.ID;
-				tabName = tab.Name;
-				tabType = tab.Type;
-				editor = tab.Editor;
-
-				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
-				$activePoolID = tab.ActiveDBID || '';
-				$currentColor = tab.ActiveDBColor || '';
-
-				// Update columns
-				for (const column of tab.columns) {
-					columns.set([
-						...$columns,
-						{
-							accessorKey: column,
-							header: column
-						}
-					]);
-				}
-
-				for (const row of tab.rows) {
-					let cell: Record<string, any> = {};
-					for (const resultCell of row) {
-						if (resultCell.column && resultCell.value) {
-							cell[resultCell.column] = resultCell.value;
-						}
-					}
-					rows.set([...$rows, cell]);
-				}
-			}
-		});
-
-		columns.set([]);
-		rows.set([]);
-	}
-
 	function setActiveTab(id: number) {
 		SetActiveTab(id)
 			.then((tab) => {
+				queryLoading = false;
 				tabsMap.set(tab.ID, tab);
 
 				tabID = tab.ID;
@@ -186,25 +203,27 @@
 					$currentColor = tab.ActiveDBColor || '';
 				}
 
-				// Update columns
-				for (const column of tab.columns) {
-					columns.set([
-						...$columns,
-						{
-							accessorKey: column,
-							header: column
-						}
-					]);
-				}
-
-				for (const row of tab.rows) {
-					let cell: Record<string, any> = {};
-					for (const resultCell of row) {
-						if (resultCell.column && resultCell.value) {
-							cell[resultCell.column] = resultCell.value;
-						}
+				if (tab.rows && tab.columns) {
+					// Update columns
+					for (const column of tab.columns) {
+						columns.set([
+							...$columns,
+							{
+								accessorKey: column,
+								header: column
+							}
+						]);
 					}
-					rows.set([...$rows, cell]);
+
+					for (const row of tab.rows) {
+						let cell: Record<string, any> = {};
+						for (const resultCell of row) {
+							if (resultCell.column && resultCell.value) {
+								cell[resultCell.column] = resultCell.value;
+							}
+						}
+						rows.set([...$rows, cell]);
+					}
 				}
 			})
 			.catch((error) => {
@@ -237,7 +256,6 @@
 	}
 
 	function executeQuery() {
-		queryLoading = true;
 		if ($selectedQuery.trim() == '') {
 			toast.error('Please select a query to execute', {
 				action: {
@@ -256,6 +274,8 @@
 			});
 			return;
 		}
+
+		queryLoading = true;
 		// Execute query
 		ExecuteQuery($activePoolID, $selectedQuery, tabID)
 			.then((result) => {
@@ -291,6 +311,7 @@
 					}
 					rows.set([...$rows, cell]);
 				}
+				queryLoading = false;
 			})
 			.catch((error) => {
 				queryLoading = false;
@@ -362,7 +383,7 @@
 	$effect(() => {
 		document.addEventListener('keydown', (event: KeyboardEvent) => {
 			if (event.key === 't' && event.metaKey) {
-				addTab();
+				addTab('');
 			}
 		});
 	});
@@ -394,7 +415,7 @@
 				{/each}
 				<button
 					class="ml-2 flex items-center gap-1 text-blue-500 hover:text-blue-700"
-					onclick={addTab}
+					onclick={() => addTab('')}
 				>
 					<Plus size={16} /> Add Tab
 				</button>
@@ -455,7 +476,7 @@
 									<SqlEditor
 										bind:value={editor}
 										bind:selectedQuery={$selectedQuery}
-										bind:suggestions={$suggestions}
+										suggestions={Array.from($suggestions)}
 									/>
 								</Resizable.Pane>
 
