@@ -474,6 +474,8 @@ func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, tabID i
 			return &model.QueryResult{OK: false, Message: err.Error()}
 		}
 		response.RowsAffected = tag.RowsAffected()
+		response.Columns = []string{"Rows Affected"}
+		response.Rows = [][]model.Cell{{model.Cell{Column: "Rows Affected", Value: fmt.Sprintf("%d", response.RowsAffected)}}}
 	} else {
 		// Use Query for read operations
 		resultRows, err := pool.Query(ctx, query)
