@@ -20,8 +20,11 @@
 		ref = $bindable(null),
 		tabID = $bindable(0),
 		tabName = $bindable(''),
+		onAddTab,
 		...restProps
-	}: ComponentProps<typeof Sidebar.Root> = $props();
+	}: ComponentProps<typeof Sidebar.Root> & {
+		onAddTab?: (tableName?: string) => void;
+	} = $props();
 
 	import {
 		postgresConnectionsMap,
@@ -95,8 +98,9 @@
 				databasesMap.set(db.ID, db);
 
 				$activeDBs.push(db);
-				$suggestions.push(...db.Tables);
-				$suggestions.push(...db.Columns);
+				// Add tables and columns to suggestions set
+				db.Tables.forEach((table) => $suggestions.add(table));
+				db.Columns.forEach((column) => $suggestions.add(column));
 
 				$selectedDBDisplay = db.PostgresConnectionName + ' - ' + db.Name;
 				$currentColor = db.Colour;
@@ -133,8 +137,9 @@
 					databasesMap.set(db.ID, db);
 					if (db.IsActive) {
 						$activeDBs.push(db);
-						$suggestions.push(...db.Tables);
-						$suggestions.push(...db.Columns);
+						// Add tables and columns to suggestions set
+						db.Tables.forEach((table) => $suggestions.add(table));
+						db.Columns.forEach((column) => $suggestions.add(column));
 
 						// Set active DB
 						$selectedDBDisplay = db.PostgresConnectionName + ' - ' + db.Name;
@@ -209,14 +214,9 @@
 						$activeDBs.findIndex((db) => db.ID === dbID),
 						1
 					); // Use splice to remove the item
-					$suggestions.splice(
-						$suggestions.findIndex((table) => db.Tables.includes(table)),
-						db.Tables.length
-					);
-					$suggestions.splice(
-						$suggestions.findIndex((column) => db.Columns.includes(column)),
-						db.Columns.length
-					);
+					// Remove tables and columns from suggestions set
+					db.Tables.forEach((table) => $suggestions.delete(table));
+					db.Columns.forEach((column) => $suggestions.delete(column));
 					db.IsActive = false;
 					db.Tables = [];
 					db.Columns = [];
@@ -277,6 +277,13 @@
 				});
 			});
 	}
+
+	// Function to handle adding a new tab
+	function handleAddTab(tableName?: string) {
+		if (onAddTab) {
+			onAddTab(tableName);
+		}
+	}
 </script>
 
 <Sidebar.Root bind:ref {tabID} {tabName} {...restProps}>
@@ -285,9 +292,14 @@
 			<Sidebar.GroupLabel>
 				<div class="flex w-full items-center justify-between">
 					Connections
-					<Button size="sm" variant="ghost" onclick={() => refresh()}>
-						<RefreshCw />
-					</Button>
+					<div class="flex gap-1">
+						<Button size="sm" variant="ghost" onclick={() => handleAddTab()}>
+							<Plus />
+						</Button>
+						<Button size="sm" variant="ghost" onclick={() => refresh()}>
+							<RefreshCw />
+						</Button>
+					</div>
 				</div>
 			</Sidebar.GroupLabel>
 			<Sidebar.GroupContent>
@@ -349,10 +361,20 @@
 																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
 															{:else if (databasesMap.get(databaseID)?.Tables || []).length > 0}
 																{#each databasesMap.get(databaseID)?.Tables || [] as table}
-																	<Sidebar.MenuButton>
-																		<Table2 color="#fd6868" strokeWidth={2} size={25} />
-																		<p>{table}</p>
-																	</Sidebar.MenuButton>
+																	<ContextMenu.Root>
+																		<ContextMenu.Trigger>
+																			<Sidebar.MenuButton ondblclick={() => handleAddTab(table)}>
+																				<Table2 color="#fd6868" strokeWidth={2} size={25} />
+																				<p>{table}</p>
+																			</Sidebar.MenuButton>
+																		</ContextMenu.Trigger>
+																		<ContextMenu.Content>
+																			<ContextMenu.Item onclick={() => handleAddTab(table)}>
+																				<Plus class="mr-2 h-4 w-4" />
+																				Open in New Tab
+																			</ContextMenu.Item>
+																		</ContextMenu.Content>
+																	</ContextMenu.Root>
 																{/each}
 															{:else}
 																No tables found

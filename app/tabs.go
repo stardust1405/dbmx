@@ -60,8 +60,6 @@ func (t *Tabs) AddTab(activeDBID, activeDB, activeDBColour, tableName, tabType s
 	return &model.Tab{
 		ID:            insertedID,
 		Name:          name,
-		Editor:        "",
-		Output:        "",
 		IsActive:      true,
 		ActiveDBID:    active_db_id,
 		ActiveDB:      active_db,
@@ -87,7 +85,7 @@ func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
 		return nil, err
 	}
 
-	if tab.Output == "" {
+	if len(tab.Output) == 0 {
 		return &tab, nil
 	}
 
@@ -121,14 +119,17 @@ func (t *Tabs) GetAllTabs() ([]model.Tab, error) {
 		}
 
 		if tab.IsActive {
-			var output model.Output
-			err = json.Unmarshal([]byte(tab.Output), &output)
-			if err != nil {
-				return nil, err
-			}
 
-			tab.Columns = output.Columns
-			tab.Rows = output.Rows
+			if len(tab.Output) > 0 {
+				var output model.Output
+				err = json.Unmarshal([]byte(tab.Output), &output)
+				if err != nil {
+					return nil, err
+				}
+
+				tab.Columns = output.Columns
+				tab.Rows = output.Rows
+			}
 		}
 
 		tabs = append(tabs, tab)
@@ -175,14 +176,16 @@ func (t *Tabs) DeleteTab(id int64) (*model.Tab, error) {
 				return nil, err
 			}
 
-			var output model.Output
-			err = json.Unmarshal([]byte(tab.Output), &output)
-			if err != nil {
-				return nil, err
-			}
+			if len(tab.Output) > 0 {
+				var output model.Output
+				err = json.Unmarshal([]byte(tab.Output), &output)
+				if err != nil {
+					return nil, err
+				}
 
-			tab.Columns = output.Columns
-			tab.Rows = output.Rows
+				tab.Columns = output.Columns
+				tab.Rows = output.Rows
+			}
 		} else {
 			isLastTab = true
 		}
