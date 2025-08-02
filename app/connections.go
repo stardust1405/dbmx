@@ -183,14 +183,20 @@ func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName
 		return nil, err
 	}
 
-	// Get all tables
+	// Get all table names for suggestions
 	tables, err := c.GetAllPostgresTables(activePoolID)
 	if err != nil {
 		return nil, err
 	}
 
-	// Get all columns
+	// Get all columns of all tables for suggestions
 	columns, err := c.GetAllDatabaseColumns(activePoolID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save the active db properties in all the tabs with type editor if active db properties are null
+	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = ?, active_db = ?, active_db_colour = ? WHERE active_db_id IS NULL AND type = 'editor'", activePoolID.String(), dbName, colour)
 	if err != nil {
 		return nil, err
 	}
@@ -236,6 +242,12 @@ func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, e
 
 	// Establish connection and add pool to active pool manager
 	_, err = c.PM.AddPool(activePoolID, connString)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save the active db properties in all the tabs with type editor if active db properties are null
+	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = ?, active_db = ?, active_db_colour = ? WHERE active_db_id IS NULL AND type = 'editor'", activePoolID.String(), database, colour)
 	if err != nil {
 		return nil, err
 	}

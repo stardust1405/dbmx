@@ -8,6 +8,9 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import { onMount, type ComponentProps } from 'svelte';
 	import { Skeleton } from '$lib/components/ui/skeleton/index.js';
+	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
+	import { Label } from '$lib/components/ui/label/index.js';
+	import { Input } from '$lib/components/ui/input/index.js';
 
 	import * as Select from '$lib/components/ui/select/index.js';
 
@@ -46,6 +49,9 @@
 	// Active tab properties
 	let { tabID = $bindable(0), tabName = $bindable(''), tabType = $bindable('') } = $props();
 	let editor = $state('');
+
+	// Table view tab state (for Data/Structure/Indexes)
+	let tableViewTab = $state('data');
 
 	onMount(() => {
 		getAllTabs();
@@ -389,10 +395,10 @@
 	});
 </script>
 
-<div class="flex h-full flex-1 flex-col overflow-hidden">
+<div class="flex h-full flex-1 flex-col overflow-hidden border">
 	<Tabs.Root value={tabID.toString()} class="flex h-full flex-1 flex-col overflow-hidden">
 		<!-- Tabs visible in the header -->
-		<header class="flex h-14 shrink-0 items-center gap-2 overflow-auto border-b px-4">
+		<header class="flex h-12 items-center gap-2 overflow-auto border-b px-4">
 			<Sidebar.Trigger class="-ml-1" />
 			<Separator orientation="vertical" />
 			<Tabs.List>
@@ -426,7 +432,82 @@
 			<!-- Main Content on screen -->
 
 			{#if tabType == 'table'}
-				<h1>Table View</h1>
+				<div class="flex h-screen flex-1 flex-col">
+					<div class="flex h-full flex-1 flex-col justify-center px-2">
+						<!-- Breadcrumb -->
+						<div class="mt-1 flex items-center justify-between">
+							<div class="flex items-center px-2">
+								<Breadcrumb.Root>
+									<Breadcrumb.List>
+										<Breadcrumb.Item>
+											<Breadcrumb.Link>{$selectedDBDisplay.split(' - ')[0]}</Breadcrumb.Link>
+										</Breadcrumb.Item>
+										<Breadcrumb.Separator />
+										<Breadcrumb.Item>
+											<Breadcrumb.Link>{$selectedDBDisplay.split(' - ')[1]}</Breadcrumb.Link>
+										</Breadcrumb.Item>
+										<Breadcrumb.Separator />
+										<Breadcrumb.Item>
+											<Breadcrumb.Page>{tabName}</Breadcrumb.Page>
+										</Breadcrumb.Item>
+									</Breadcrumb.List>
+								</Breadcrumb.Root>
+							</div>
+							<div class="flex px-2">
+								<Tabs.Root value={tableViewTab}>
+									<Tabs.List class="flex items-center justify-center gap-2">
+										<Tabs.Trigger value="data" onclick={() => (tableViewTab = 'data')}
+											>Data</Tabs.Trigger
+										>
+										<Tabs.Trigger value="structure" onclick={() => (tableViewTab = 'structure')}
+											>Structure</Tabs.Trigger
+										>
+										<Tabs.Trigger value="indexes" onclick={() => (tableViewTab = 'indexes')}
+											>Indexes</Tabs.Trigger
+										>
+									</Tabs.List>
+								</Tabs.Root>
+							</div>
+						</div>
+
+						<!-- Content based on selected tab -->
+						{#if tableViewTab === 'data'}
+							<div class="flex flex-1 flex-col">
+								<div class="h-18 flex flex-col">
+									<div class="flex flex-1 items-center p-1">
+										<div class="flex flex-1 items-center gap-2 p-1">
+											<Label for="select">Select</Label>
+											<Input type="text" id="select" placeholder="Select" class="w-full" />
+										</div>
+										<div class="flex items-center gap-2 p-1">
+											<Label for="where">Limit</Label>
+											<Input type="text" id="limit" placeholder="Limit" class="w-24" />
+										</div>
+										<div class="flex items-center gap-2 p-1">
+											<Label for="where">Offset</Label>
+											<Input type="text" id="offset" placeholder="Offset" class="w-24" />
+										</div>
+									</div>
+									<div class="flex flex-1 items-center gap-2 px-2">
+										<Label for="where">Where</Label>
+										<Input type="text" id="where" placeholder="Where..." class="w-full" />
+									</div>
+								</div>
+								<div class="mt-2 flex flex-1 border px-2">
+									<p>Table here</p>
+								</div>
+							</div>
+						{:else if tableViewTab === 'structure'}
+							<div class="mt-2 flex flex-1 flex-col px-2">
+								<p>Structure here</p>
+							</div>
+						{:else if tableViewTab === 'indexes'}
+							<div class="mt-1 flex flex-1 flex-col px-2">
+								<p>Indexes here</p>
+							</div>
+						{/if}
+					</div>
+				</div>
 			{:else}
 				<div class="flex h-screen flex-1 flex-col px-4">
 					<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
