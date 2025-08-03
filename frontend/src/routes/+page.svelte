@@ -10,6 +10,7 @@
 	let tabTableDBPoolID = $state('');
 	let tabPostgresConnName = $state('');
 	let tabDBName = $state('');
+	let tabPostgresConnID = $state(0);
 
 	// Reference to the Tabs component
 	let tabsComponent: Tabs;
@@ -29,7 +30,14 @@
 </script>
 
 <Sidebar.Provider>
-	<AppSidebar bind:tabID bind:tabName bind:tabTableDBPoolID onAddTab={handleAddTab} />
+	<AppSidebar
+		bind:tabID
+		bind:tabName
+		bind:tabTableDBPoolID
+		bind:tabPostgresConnID
+		bind:tabDBName
+		onAddTab={handleAddTab}
+	/>
 	<Sidebar.Inset>
 		<Tabs
 			bind:this={tabsComponent}
@@ -39,6 +47,7 @@
 			bind:tabTableDBPoolID
 			bind:tabPostgresConnName
 			bind:tabDBName
+			bind:tabPostgresConnID
 		/>
 	</Sidebar.Inset>
 </Sidebar.Provider>

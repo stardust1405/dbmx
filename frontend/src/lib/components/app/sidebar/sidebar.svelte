@@ -16,6 +16,8 @@
 		tabID = $bindable(0),
 		tabName = $bindable(''),
 		tabTableDBPoolID = $bindable(''),
+		tabPostgresConnID = $bindable(0),
+		tabDBName = $bindable(''),
 		onAddTab,
 		...restProps
 	}: ComponentProps<typeof Sidebar.Root> & {
@@ -104,6 +106,12 @@
 				db.Tables.forEach((table) => $suggestions.add(table));
 				db.Columns.forEach((column) => $suggestions.add(column));
 
+				// If the server and database to which connection was established is the current table's database
+				// Set the tab table db pool id so that it's connected
+				if (tabPostgresConnID === db.PostgresConnectionID && tabDBName === db.Name) {
+					tabTableDBPoolID = db.PoolID;
+				}
+
 				$selectedDBDisplay = db.PostgresConnectionName + ' - ' + db.Name;
 				$currentColor = db.Colour;
 				$activePoolID = db.PoolID;
@@ -142,6 +150,12 @@
 						// Add tables and columns to suggestions set
 						db.Tables.forEach((table) => $suggestions.add(table));
 						db.Columns.forEach((column) => $suggestions.add(column));
+
+						// If the server and database to which connection was established is the current table's database
+						// Set the tab table db pool id so that it's connected
+						if (tabPostgresConnID === db.PostgresConnectionID && tabDBName === db.Name) {
+							tabTableDBPoolID = db.PoolID;
+						}
 
 						// Set active DB
 						$selectedDBDisplay = db.PostgresConnectionName + ' - ' + db.Name;
@@ -239,7 +253,6 @@
 						$selectedDBDisplay = $activeDBs[0].PostgresConnectionName + ' - ' + $activeDBs[0].Name;
 						$currentColor = $activeDBs[0].Colour;
 						$activePoolID = $activeDBs[0].PoolID;
-						tabTableDBPoolID = $activeDBs[0].PoolID;
 					}
 
 					SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
@@ -300,7 +313,15 @@
 	}
 </script>
 
-<Sidebar.Root bind:ref {tabID} {tabName} {tabTableDBPoolID} {...restProps}>
+<Sidebar.Root
+	bind:ref
+	{tabID}
+	{tabName}
+	{tabTableDBPoolID}
+	{tabPostgresConnID}
+	{tabDBName}
+	{...restProps}
+>
 	<Sidebar.Content>
 		<Sidebar.Group>
 			<Sidebar.GroupLabel>
