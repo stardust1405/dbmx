@@ -15,6 +15,7 @@
 		children,
 		tabID = $bindable(0),
 		tabName = $bindable(''),
+		tabTableDBPoolID = $bindable(''),
 		...restProps
 	}: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
 		side?: 'left' | 'right';
@@ -22,6 +23,7 @@
 		collapsible?: 'offcanvas' | 'icon' | 'none';
 		tabID?: number;
 		tabName?: string;
+		tabTableDBPoolID?: string;
 	} = $props();
 
 	const sidebar = useSidebar();

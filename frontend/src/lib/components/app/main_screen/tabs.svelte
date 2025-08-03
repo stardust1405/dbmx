@@ -47,7 +47,14 @@
 	// Handle Tabs
 
 	// Active tab properties
-	let { tabID = $bindable(0), tabName = $bindable(''), tabType = $bindable('') } = $props();
+	let {
+		tabID = $bindable(0),
+		tabName = $bindable(''),
+		tabType = $bindable(''),
+		tabDBName = $bindable(''),
+		tabTableDBPoolID = $bindable(''),
+		tabPostgresConnName = $bindable('')
+	} = $props();
 	let editor = $state('');
 
 	// Table view tab state (for Data/Structure/Indexes)
@@ -70,6 +77,12 @@
 					tabID = tab.ID;
 					tabName = tab.Name;
 					tabType = tab.Type;
+
+					// Properties for table view tab
+					tabDBName = tab.DBName || '';
+					tabTableDBPoolID = tab.ActiveDBID || '';
+					tabPostgresConnName = tab.PostgresConnName || '';
+
 					editor = tab.Editor;
 
 					if ($activeDBs.length == 0) {
@@ -112,25 +125,54 @@
 		rows.set([]);
 	}
 
-	export function addTab(tableName: string = '') {
+	export function addTab(
+		tableName: string = '',
+		postgresConnID: number = 0,
+		dbName: string = '',
+		tableDBPoolID: string = '',
+		postgresConnName: string = ''
+	) {
 		var tableType = 'editor';
 		var tabDisplayName = 'Editor';
+
+		// If table's pool id is provided, use that instead of the active pool id
+		// This is used when we want to open a table in a new tab
+		// In case of table, we want the pool id of the table's database
+
+		// First assign the active global pool id
+		var poolID: string = $activePoolID;
+
+		// If table's pool id is provided, use that instead of the active pool id
 		if (tableName.trim() != '') {
 			tableType = 'table';
 			tabDisplayName = tableName;
+			poolID = tableDBPoolID;
 		}
 		// Send default values for now in activeDBID and activeDB
-		AddTab($activePoolID, $selectedDBDisplay, $currentColor, tabDisplayName, tableType).then(
-			(tab) => {
-				queryLoading = false;
-				tabsMap.set(tab.ID, tab);
+		AddTab(
+			poolID,
+			$selectedDBDisplay,
+			$currentColor,
+			tabDisplayName,
+			tableType,
+			postgresConnID,
+			dbName,
+			postgresConnName
+		).then((tab) => {
+			queryLoading = false;
+			tabsMap.set(tab.ID, tab);
 
-				tabID = tab.ID;
-				tabName = tab.Name;
-				tabType = tab.Type;
-				editor = tab.Editor;
-			}
-		);
+			tabID = tab.ID;
+			tabName = tab.Name;
+			tabType = tab.Type;
+
+			// Properties for table view tab
+			tabDBName = tab.DBName || '';
+			tabTableDBPoolID = tab.ActiveDBID || '';
+			tabPostgresConnName = tab.PostgresConnName || '';
+
+			editor = tab.Editor;
+		});
 
 		$selectedDBDisplay = $selectedDBDisplay;
 		$activePoolID = $activePoolID;
@@ -153,6 +195,12 @@
 				tabID = tab.ID;
 				tabName = tab.Name;
 				tabType = tab.Type;
+
+				// Properties for table view tab
+				tabDBName = tab.DBName || '';
+				tabTableDBPoolID = tab.ActiveDBID || '';
+				tabPostgresConnName = tab.PostgresConnName || '';
+
 				editor = tab.Editor;
 
 				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
@@ -197,6 +245,12 @@
 				tabID = tab.ID;
 				tabName = tab.Name;
 				tabType = tab.Type;
+
+				// Properties for table view tab
+				tabDBName = tab.DBName || '';
+				tabTableDBPoolID = tab.ActiveDBID || '';
+				tabPostgresConnName = tab.PostgresConnName || '';
+
 				editor = tab.Editor;
 
 				if ($activeDBs.length == 0) {
@@ -389,7 +443,7 @@
 	$effect(() => {
 		document.addEventListener('keydown', (event: KeyboardEvent) => {
 			if (event.key === 't' && event.metaKey) {
-				addTab('');
+				addTab();
 			}
 		});
 	});
@@ -421,7 +475,7 @@
 				{/each}
 				<button
 					class="ml-2 flex items-center gap-1 text-blue-500 hover:text-blue-700"
-					onclick={() => addTab('')}
+					onclick={() => addTab()}
 				>
 					<Plus size={16} /> Add Tab
 				</button>
@@ -440,11 +494,11 @@
 								<Breadcrumb.Root>
 									<Breadcrumb.List>
 										<Breadcrumb.Item>
-											<Breadcrumb.Link>{$selectedDBDisplay.split(' - ')[0]}</Breadcrumb.Link>
+											<Breadcrumb.Link>{tabPostgresConnName}</Breadcrumb.Link>
 										</Breadcrumb.Item>
 										<Breadcrumb.Separator />
 										<Breadcrumb.Item>
-											<Breadcrumb.Link>{$selectedDBDisplay.split(' - ')[1]}</Breadcrumb.Link>
+											<Breadcrumb.Link>{tabDBName}</Breadcrumb.Link>
 										</Breadcrumb.Item>
 										<Breadcrumb.Separator />
 										<Breadcrumb.Item>
@@ -452,6 +506,11 @@
 										</Breadcrumb.Item>
 									</Breadcrumb.List>
 								</Breadcrumb.Root>
+								{#if tabTableDBPoolID === ''}
+									<Label class="ml-2 text-red-500">Disconnected</Label>
+								{:else}
+									<Label class="ml-2 text-green-500">Connected</Label>
+								{/if}
 							</div>
 							<div class="flex px-2">
 								<Tabs.Root value={tableViewTab}>
