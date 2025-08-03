@@ -53,7 +53,8 @@
 		tabType = $bindable(''),
 		tabDBName = $bindable(''),
 		tabTableDBPoolID = $bindable(''),
-		tabPostgresConnName = $bindable('')
+		tabPostgresConnName = $bindable(''),
+		tabPostgresConnID = $bindable(0)
 	} = $props();
 	let editor = $state('');
 
@@ -82,6 +83,7 @@
 					tabDBName = tab.DBName || '';
 					tabTableDBPoolID = tab.ActiveDBID || '';
 					tabPostgresConnName = tab.PostgresConnName || '';
+					tabPostgresConnID = tab.PostgresConnID || 0;
 
 					editor = tab.Editor;
 
@@ -170,6 +172,7 @@
 			tabDBName = tab.DBName || '';
 			tabTableDBPoolID = tab.ActiveDBID || '';
 			tabPostgresConnName = tab.PostgresConnName || '';
+			tabPostgresConnID = tab.PostgresConnID || 0;
 
 			editor = tab.Editor;
 		});
@@ -200,6 +203,7 @@
 				tabDBName = tab.DBName || '';
 				tabTableDBPoolID = tab.ActiveDBID || '';
 				tabPostgresConnName = tab.PostgresConnName || '';
+				tabPostgresConnID = tab.PostgresConnID || 0;
 
 				editor = tab.Editor;
 
@@ -250,6 +254,7 @@
 				tabDBName = tab.DBName || '';
 				tabTableDBPoolID = tab.ActiveDBID || '';
 				tabPostgresConnName = tab.PostgresConnName || '';
+				tabPostgresConnID = tab.PostgresConnID || 0;
 
 				editor = tab.Editor;
 
