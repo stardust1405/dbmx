@@ -1,8 +1,3 @@
-<script lang="ts" module>
-	import { onDestroy, onMount } from 'svelte';
-	import type { model } from '$lib/wailsjs/go/models';
-</script>
-
 <script lang="ts">
 	import * as Collapsible from '$lib/components/ui/collapsible/index.js';
 	import * as Sidebar from '$lib/components/ui/sidebar/index.js';
@@ -20,10 +15,17 @@
 		ref = $bindable(null),
 		tabID = $bindable(0),
 		tabName = $bindable(''),
+		tabTableDBPoolID = $bindable(''),
 		onAddTab,
 		...restProps
 	}: ComponentProps<typeof Sidebar.Root> & {
-		onAddTab?: (tableName?: string) => void;
+		onAddTab?: (
+			tableName?: string,
+			postgresConnID?: number,
+			dbName?: string,
+			tableDBPoolID?: string,
+			postgresConnName?: string
+		) => void;
 	} = $props();
 
 	import {
@@ -92,10 +94,10 @@
 		dbLoadingMap.set(dbID, true);
 
 		// Establish connection
-		EstablishPostgresDatabaseConnection(id, dbID, db.Name)
+		EstablishPostgresDatabaseConnection(id, db.Name)
 			.then((db) => {
 				dbLoadingMap.set(dbID, false);
-				databasesMap.set(db.ID, db);
+				databasesMap.set(dbID, db);
 
 				$activeDBs.push(db);
 				// Add tables and columns to suggestions set
@@ -223,15 +225,21 @@
 					databasesMap.delete(dbID);
 					databasesMap.set(dbID, db);
 
+					// If the active tab is connected to this db, disconnect it
+					if (tabTableDBPoolID === db.PoolID) {
+						tabTableDBPoolID = '';
+					}
+
 					if ($activeDBs.length == 0) {
 						$selectedDBDisplay = 'Connect to a database';
 						$currentColor = '';
 						$activePoolID = '';
 					} else {
-						// Set active DB
+						// Set first db as active DB
 						$selectedDBDisplay = $activeDBs[0].PostgresConnectionName + ' - ' + $activeDBs[0].Name;
 						$currentColor = $activeDBs[0].Colour;
 						$activePoolID = $activeDBs[0].PoolID;
+						tabTableDBPoolID = $activeDBs[0].PoolID;
 					}
 
 					SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
@@ -279,14 +287,20 @@
 	}
 
 	// Function to handle adding a new tab
-	function handleAddTab(tableName?: string) {
+	function handleAddTab(
+		tableName?: string,
+		postgresConnID?: number,
+		dbName?: string,
+		tableDBPoolID?: string,
+		postgresConnName?: string
+	) {
 		if (onAddTab) {
-			onAddTab(tableName);
+			onAddTab(tableName, postgresConnID, dbName, tableDBPoolID, postgresConnName);
 		}
 	}
 </script>
 
-<Sidebar.Root bind:ref {tabID} {tabName} {...restProps}>
+<Sidebar.Root bind:ref {tabID} {tabName} {tabTableDBPoolID} {...restProps}>
 	<Sidebar.Content>
 		<Sidebar.Group>
 			<Sidebar.GroupLabel>
@@ -363,13 +377,31 @@
 																{#each databasesMap.get(databaseID)?.Tables || [] as table}
 																	<ContextMenu.Root>
 																		<ContextMenu.Trigger>
-																			<Sidebar.MenuButton ondblclick={() => handleAddTab(table)}>
+																			<Sidebar.MenuButton
+																				ondblclick={() =>
+																					handleAddTab(
+																						table,
+																						connection.ID,
+																						databasesMap.get(databaseID)?.Name,
+																						databasesMap.get(databaseID)?.PoolID,
+																						connection.Name
+																					)}
+																			>
 																				<Table2 color="#fd6868" strokeWidth={2} size={25} />
 																				<p>{table}</p>
 																			</Sidebar.MenuButton>
 																		</ContextMenu.Trigger>
 																		<ContextMenu.Content>
-																			<ContextMenu.Item onclick={() => handleAddTab(table)}>
+																			<ContextMenu.Item
+																				onclick={() =>
+																					handleAddTab(
+																						table,
+																						connection.ID,
+																						databasesMap.get(databaseID)?.Name,
+																						databasesMap.get(databaseID)?.PoolID,
+																						connection.Name
+																					)}
+																			>
 																				<Plus class="mr-2 h-4 w-4" />
 																				Open in New Tab
 																			</ContextMenu.Item>

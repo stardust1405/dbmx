@@ -154,6 +154,9 @@ export namespace model {
 	    Type: string;
 	    columns: string[];
 	    rows: Cell[][];
+	    PostgresConnID?: number;
+	    PostgresConnName: string;
+	    DBName?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Tab(source);
@@ -172,6 +175,9 @@ export namespace model {
 	        this.Type = source["Type"];
 	        this.columns = source["columns"];
 	        this.rows = this.convertValues(source["rows"], Cell);
+	        this.PostgresConnID = source["PostgresConnID"];
+	        this.PostgresConnName = source["PostgresConnName"];
+	        this.DBName = source["DBName"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

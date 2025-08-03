@@ -157,7 +157,10 @@ func (c *Connections) RefreshPostgresDatabase(id int64, dbID, dbName, poolID str
 	}, nil
 }
 
-func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName string) (*model.Database, error) {
+// This func is used to connect a specific database within a server
+// id is the postgres connection id primary key in the sqlite3 database
+// dbID uniquely identifies the active database within a connection
+func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbName string) (*model.Database, error) {
 	// Query for a single row by ID
 	var name, host, port, username, password, colour string
 	row := c.DB.QueryRow("SELECT name, host, port, username, password, colour FROM postgres WHERE id = ?", id)
@@ -195,14 +198,23 @@ func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName
 		return nil, err
 	}
 
+	activeDB := name + " - " + dbName
+
 	// Save the active db properties in all the tabs with type editor if active db properties are null
-	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = ?, active_db = ?, active_db_colour = ? WHERE active_db_id IS NULL AND type = 'editor'", activePoolID.String(), dbName, colour)
+	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = ?, active_db = ?, active_db_colour = ? WHERE active_db_id IS NULL AND type = 'editor'", activePoolID.String(), activeDB, colour)
+	if err != nil {
+		return nil, err
+	}
+
+	// In case of table rows, find all the rows with type table where
+	// active_db_id is null and postgres_connection_id and database matches
+	// set the active pool id and active db properties in such tabs
+	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = ?, active_db = ?, active_db_colour = ? WHERE active_db_id IS NULL AND type = 'table' AND postgres_conn_id = ? AND db_name = ?", activePoolID.String(), activeDB, colour, id, dbName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &model.Database{
-		ID:                     dbID,
 		Name:                   dbName,
 		PostgresConnectionID:   id,
 		PostgresConnectionName: name,
@@ -214,6 +226,7 @@ func (c *Connections) EstablishPostgresDatabaseConnection(id int64, dbID, dbName
 	}, nil
 }
 
+// This func is used to connect to a server
 func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, error) {
 	// Query for a single row by ID
 	var name, host, port, username, password, database, colour string
@@ -246,8 +259,18 @@ func (c *Connections) EstablishPostgresConnection(id int64) ([]model.Database, e
 		return nil, err
 	}
 
+	activeDB := name + " - " + database
+
 	// Save the active db properties in all the tabs with type editor if active db properties are null
-	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = ?, active_db = ?, active_db_colour = ? WHERE active_db_id IS NULL AND type = 'editor'", activePoolID.String(), database, colour)
+	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = ?, active_db = ?, active_db_colour = ? WHERE active_db_id IS NULL AND type = 'editor'", activePoolID.String(), activeDB, colour)
+	if err != nil {
+		return nil, err
+	}
+
+	// In case of table rows, find all the rows with type table where
+	// active_db_id is null and postgres_connection_id and database matches
+	// set the active pool id and active db properties in such tabs
+	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = ?, active_db = ?, active_db_colour = ? WHERE active_db_id IS NULL AND type = 'table' AND postgres_conn_id = ? AND db_name = ?", activePoolID.String(), activeDB, colour, id, database)
 	if err != nil {
 		return nil, err
 	}
