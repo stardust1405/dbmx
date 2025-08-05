@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -560,6 +561,108 @@ func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, tabID i
 
 		response.Rows = rows
 	}
+
+	output := &model.Output{
+		Columns: response.Columns,
+		Rows:    response.Rows,
+	}
+
+	go c.UpdateTabOutput(tabID, output)
+
+	return response
+}
+
+func (c *Connections) GetTableData(activePoolID uuid.UUID, tabID int64, tableName, selectQuery, limit, offset, where, orderBy, groupBy string) *model.QueryResult {
+	pool, exists := c.PM.GetPool(activePoolID)
+	if !exists {
+		return &model.QueryResult{OK: false, Message: "pool doesn't exist"}
+	}
+
+	ctx := context.Background()
+
+	response := &model.QueryResult{OK: true}
+
+	setLimit := strconv.Itoa(100)
+	if strings.TrimSpace(limit) != "" {
+		limitInt, err := strconv.Atoi(strings.TrimSpace(limit))
+		if err != nil {
+			return &model.QueryResult{OK: false, Message: "limit is not a number"}
+		}
+		if limitInt > 100 {
+			return &model.QueryResult{OK: false, Message: "limit cannot be greater than 100"}
+		}
+		setLimit = strings.TrimSpace(limit)
+	}
+
+	if strings.TrimSpace(selectQuery) == "" {
+		selectQuery = "*"
+	}
+
+	query := fmt.Sprintf("SELECT %s FROM %s", selectQuery, tableName)
+	if strings.TrimSpace(where) != "" {
+		query += fmt.Sprintf(" WHERE %s", strings.TrimSpace(where))
+	}
+	if strings.TrimSpace(groupBy) != "" {
+		query += fmt.Sprintf(" GROUP BY %s", strings.TrimSpace(groupBy))
+	}
+	if strings.TrimSpace(orderBy) != "" {
+		query += fmt.Sprintf(" ORDER BY %s", strings.TrimSpace(orderBy))
+	}
+
+	// Set limit
+	query += fmt.Sprintf(" LIMIT %s", setLimit)
+
+	if strings.TrimSpace(offset) != "" {
+		query += fmt.Sprintf(" OFFSET %s", strings.TrimSpace(offset))
+	}
+
+	// Use Query for read operations
+	resultRows, err := pool.Query(ctx, query)
+	if err != nil {
+		return &model.QueryResult{OK: false, Message: err.Error()}
+	}
+	defer resultRows.Close()
+
+	columns := resultRows.FieldDescriptions()
+	columnNames := make([]string, len(columns))
+	for i, column := range columns {
+		columnNames[i] = string(column.Name)
+	}
+	response.Columns = columnNames
+
+	var rows [][]model.Cell
+
+	for resultRows.Next() {
+		row, err := resultRows.Values()
+		if err != nil {
+			return &model.QueryResult{OK: false, Message: err.Error()}
+		}
+
+		cells := []model.Cell{}
+		for i, cell := range row {
+			newCell := model.Cell{
+				Column: columnNames[i],
+			}
+			switch v := cell.(type) {
+			case []byte:
+				newCell.Value = string(v)
+			case time.Time:
+				newCell.Value = v.Format(time.RFC3339)
+			case uuid.UUID:
+				newCell.Value = v.String()
+			default:
+				newCell.Value = fmt.Sprintf("%v", v)
+			}
+			cells = append(cells, newCell)
+		}
+		rows = append(rows, cells)
+	}
+
+	if err := resultRows.Err(); err != nil {
+		return &model.QueryResult{OK: false, Message: err.Error()}
+	}
+
+	response.Rows = rows
 
 	output := &model.Output{
 		Columns: response.Columns,
