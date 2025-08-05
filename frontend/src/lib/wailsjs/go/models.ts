@@ -157,6 +157,12 @@ export namespace model {
 	    PostgresConnID?: number;
 	    PostgresConnName: string;
 	    DBName?: string;
+	    Select: string;
+	    Limit: string;
+	    Offset: string;
+	    Where: string;
+	    OrderBy: string;
+	    GroupBy: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Tab(source);
@@ -178,6 +184,12 @@ export namespace model {
 	        this.PostgresConnID = source["PostgresConnID"];
 	        this.PostgresConnName = source["PostgresConnName"];
 	        this.DBName = source["DBName"];
+	        this.Select = source["Select"];
+	        this.Limit = source["Limit"];
+	        this.Offset = source["Offset"];
+	        this.Where = source["Where"];
+	        this.OrderBy = source["OrderBy"];
+	        this.GroupBy = source["GroupBy"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

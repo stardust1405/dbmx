@@ -25,6 +25,12 @@ type Tab struct {
 	PostgresConnID   *int64
 	PostgresConnName string
 	DBName           *string
+	Select           string
+	Limit            string
+	Offset           string
+	Where            string
+	OrderBy          string
+	GroupBy          string
 }
 
 var validTypes = map[string]struct{}{

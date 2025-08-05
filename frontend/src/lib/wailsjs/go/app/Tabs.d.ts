@@ -12,4 +12,4 @@ export function SaveActiveDBProps(arg1:number,arg2:string,arg3:string,arg4:strin
 
 export function SetActiveTab(arg1:number):Promise<model.Tab>;
 
-export function UpdateTabEditorContent(arg1:number,arg2:string):Promise<void>;
+export function UpdateTabEditorContent(arg1:number,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string):Promise<void>;

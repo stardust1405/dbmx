@@ -57,7 +57,7 @@ func (t *Tabs) AddTab(activeDBID, activeDB, activeDBColour, tableName, tabType s
 	}
 
 	// Insert a new active tab
-	query := `INSERT INTO tabs (name, editor, output, is_active, active_db_id, active_db, active_db_colour, type, postgres_conn_id, db_name, postgres_conn_name) VALUES (?, '', '', true, ?, ?, ?, ?, ?, ?, ?);`
+	query := `INSERT INTO tabs (name, editor, output, is_active, active_db_id, active_db, active_db_colour, type, postgres_conn_id, db_name, postgres_conn_name, select, limit, offset, where, order_by, group_by) VALUES (?, '', '', true, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', '', '');`
 	result, err := t.DB.Exec(query, name, active_db_id, active_db, active_db_colour, tabType, postgres_conn_id, db_name, postgresConnName)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
 	updateQuery = `UPDATE tabs SET is_active = true WHERE id = ? RETURNING *`
 
 	var tab model.Tab
-	err = t.DB.QueryRow(updateQuery, id).Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type, &tab.PostgresConnID, &tab.DBName, &tab.PostgresConnName)
+	err = t.DB.QueryRow(updateQuery, id).Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type, &tab.PostgresConnID, &tab.DBName, &tab.PostgresConnName, &tab.Select, &tab.Limit, &tab.Offset, &tab.Where, &tab.OrderBy, &tab.GroupBy)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
 
 func (t *Tabs) GetAllTabs() ([]model.Tab, error) {
 	// Query for all tabs
-	query := `SELECT id, name, editor, output, is_active, active_db_id, active_db, active_db_colour, type, postgres_conn_id, db_name, postgres_conn_name FROM tabs`
+	query := `SELECT id, name, editor, output, is_active, active_db_id, active_db, active_db_colour, type, postgres_conn_id, db_name, postgres_conn_name, "select", "limit", "offset", "where", "order_by", "group_by" FROM tabs`
 	rows, err := t.DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func (t *Tabs) GetAllTabs() ([]model.Tab, error) {
 	var tabs []model.Tab
 	for rows.Next() {
 		var tab model.Tab
-		err := rows.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type, &tab.PostgresConnID, &tab.DBName, &tab.PostgresConnName)
+		err := rows.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type, &tab.PostgresConnID, &tab.DBName, &tab.PostgresConnName, &tab.Select, &tab.Limit, &tab.Offset, &tab.Where, &tab.OrderBy, &tab.GroupBy)
 		if err != nil {
 			return nil, err
 		}
@@ -191,7 +191,7 @@ func (t *Tabs) DeleteTab(id int64) (*model.Tab, error) {
 			query = `UPDATE tabs SET is_active = true WHERE id = (SELECT id FROM tabs WHERE id != ? LIMIT 1) RETURNING *`
 			row := t.DB.QueryRow(query, id)
 
-			err = row.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type, &tab.PostgresConnID, &tab.DBName, &tab.PostgresConnName)
+			err = row.Scan(&tab.ID, &tab.Name, &tab.Editor, &tab.Output, &tab.IsActive, &tab.ActiveDBID, &tab.ActiveDB, &tab.ActiveDBColor, &tab.Type, &tab.PostgresConnID, &tab.DBName, &tab.PostgresConnName, &tab.Select, &tab.Limit, &tab.Offset, &tab.Where, &tab.OrderBy, &tab.GroupBy)
 			if err != nil {
 				return nil, err
 			}
@@ -225,9 +225,9 @@ func (t *Tabs) DeleteTab(id int64) (*model.Tab, error) {
 	return nil, nil
 }
 
-func (t *Tabs) UpdateTabEditorContent(id int64, editor string) error {
-	query := `UPDATE tabs SET editor = ? WHERE id = ?`
-	_, err := t.DB.Exec(query, editor, id)
+func (t *Tabs) UpdateTabEditorContent(id int64, editor string, selectQuery, limit, offset, where, orderBy, groupBy string) error {
+	query := `UPDATE tabs SET editor = ?, "select" = ?, "limit" = ?, "offset" = ?, "where" = ?, "order_by" = ?, "group_by" = ? WHERE id = ?`
+	_, err := t.DB.Exec(query, editor, selectQuery, limit, offset, where, orderBy, groupBy, id)
 	if err != nil {
 		return err
 	}

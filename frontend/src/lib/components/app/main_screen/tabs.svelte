@@ -34,7 +34,7 @@
 	} from '$lib/state.svelte';
 
 	import { toast } from 'svelte-sonner';
-	import { ExecuteQuery } from '$lib/wailsjs/go/app/Connections.js';
+	import { ExecuteQuery, GetTableData } from '$lib/wailsjs/go/app/Connections.js';
 
 	import DataTable from './data-table.svelte';
 	import { columns, rows } from '$lib/state.svelte';
@@ -54,7 +54,13 @@
 		tabDBName = $bindable(''),
 		tabTableDBPoolID = $bindable(''),
 		tabPostgresConnName = $bindable(''),
-		tabPostgresConnID = $bindable(0)
+		tabPostgresConnID = $bindable(0),
+		select = $bindable(''),
+		limit = $bindable(''),
+		offset = $bindable(''),
+		where = $bindable(''),
+		orderBy = $bindable(''),
+		groupBy = $bindable('')
 	} = $props();
 	let editor = $state('');
 
@@ -84,6 +90,13 @@
 					tabTableDBPoolID = tab.ActiveDBID || '';
 					tabPostgresConnName = tab.PostgresConnName || '';
 					tabPostgresConnID = tab.PostgresConnID || 0;
+
+					select = tab.Select;
+					limit = tab.Limit;
+					offset = tab.Offset;
+					where = tab.Where;
+					orderBy = tab.OrderBy;
+					groupBy = tab.GroupBy;
 
 					editor = tab.Editor;
 
@@ -205,6 +218,13 @@
 				tabPostgresConnName = tab.PostgresConnName || '';
 				tabPostgresConnID = tab.PostgresConnID || 0;
 
+				select = tab.Select;
+				limit = tab.Limit;
+				offset = tab.Offset;
+				where = tab.Where;
+				orderBy = tab.OrderBy;
+				groupBy = tab.GroupBy;
+
 				editor = tab.Editor;
 
 				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
@@ -255,6 +275,13 @@
 				tabTableDBPoolID = tab.ActiveDBID || '';
 				tabPostgresConnName = tab.PostgresConnName || '';
 				tabPostgresConnID = tab.PostgresConnID || 0;
+
+				select = tab.Select;
+				limit = tab.Limit;
+				offset = tab.Offset;
+				where = tab.Where;
+				orderBy = tab.OrderBy;
+				groupBy = tab.GroupBy;
 
 				editor = tab.Editor;
 
@@ -394,11 +421,80 @@
 		rows.set([]);
 	}
 
+	function getTableData() {
+		if (tabTableDBPoolID == '') {
+			toast.error('Please select a database to execute the query', {
+				action: {
+					label: 'OK',
+					onClick: () => console.info('OK')
+				}
+			});
+			return;
+		}
+
+		queryLoading = true;
+		// Execute query
+		GetTableData(tabTableDBPoolID, tabID, tabName, select, limit, offset, where, orderBy, groupBy)
+			.then((result) => {
+				if (!result.ok) {
+					queryLoading = false;
+					toast.error('Query Failed', {
+						description: result.message,
+						action: {
+							label: 'OK',
+							onClick: () => console.info('OK')
+						}
+					});
+					return;
+				}
+
+				// Update columns
+				for (const column of result.columns) {
+					columns.set([
+						...$columns,
+						{
+							accessorKey: column,
+							header: column
+						}
+					]);
+				}
+
+				for (const row of result.rows) {
+					let cell: Record<string, any> = {};
+					for (const resultCell of row) {
+						if (resultCell.column && resultCell.value) {
+							cell[resultCell.column] = resultCell.value;
+						}
+					}
+					rows.set([...$rows, cell]);
+				}
+				queryLoading = false;
+			})
+			.catch((error) => {
+				queryLoading = false;
+				// Handle errors from the ExecuteQuery call
+				toast.error('Query Failed', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
+
+		columns.set([]);
+		rows.set([]);
+	}
+
 	document.addEventListener('keydown', handleKeyDown);
 	function handleKeyDown(event: KeyboardEvent) {
 		if (event.altKey && event.key === 'Enter') {
 			event.preventDefault();
-			executeQuery();
+			if (tabType == 'table') {
+				getTableData();
+			} else {
+				executeQuery();
+			}
 		}
 		// Command+S (Mac) or Ctrl+S (Windows/Linux)
 		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
@@ -434,13 +530,19 @@
 	$effect(() => {
 		// Explicitly reference editor to ensure reactivity
 		const _ = editor;
+		const selectQuery = select;
+		const limitQuery = limit;
+		const offsetQuery = offset;
+		const whereQuery = where;
+		const orderByQuery = orderBy;
+		const groupByQuery = groupBy;
 
 		// Clear any existing timeout to debounce rapid changes
 		if (editorUpdateTimer) clearTimeout(editorUpdateTimer);
 
 		// Set a new timeout to update the content after typing stops
 		editorUpdateTimer = setTimeout(() => {
-			UpdateTabEditorContent(tabID, editor);
+			UpdateTabEditorContent(tabID, editor, select, limit, offset, where, orderBy, groupBy);
 		}, 500);
 	});
 
@@ -541,24 +643,85 @@
 									<div class="flex flex-1 items-center p-1">
 										<div class="flex flex-1 items-center gap-2 p-1">
 											<Label for="select">Select</Label>
-											<Input type="text" id="select" placeholder="Select" class="w-full" />
+											<Input
+												type="text"
+												id="select"
+												placeholder="Select"
+												class="w-full"
+												bind:value={select}
+											/>
 										</div>
 										<div class="flex items-center gap-2 p-1">
-											<Label for="where">Limit</Label>
-											<Input type="text" id="limit" placeholder="Limit" class="w-24" />
+											<Label for="limit">Limit</Label>
+											<Input
+												type="text"
+												id="limit"
+												placeholder="Limit"
+												class="w-24"
+												bind:value={limit}
+											/>
 										</div>
 										<div class="flex items-center gap-2 p-1">
-											<Label for="where">Offset</Label>
-											<Input type="text" id="offset" placeholder="Offset" class="w-24" />
+											<Label for="offset">Offset</Label>
+											<Input
+												type="text"
+												id="offset"
+												placeholder="Offset"
+												class="w-24"
+												bind:value={offset}
+											/>
 										</div>
 									</div>
-									<div class="flex flex-1 items-center gap-2 px-2">
+									<div class="flex flex-1 items-center gap-2 p-1">
 										<Label for="where">Where</Label>
-										<Input type="text" id="where" placeholder="Where..." class="w-full" />
+										<Input
+											type="text"
+											id="where"
+											placeholder="Where..."
+											class="w-full"
+											bind:value={where}
+										/>
+									</div>
+									<div class="flex flex-1 items-center gap-4 p-1">
+										<Label for="orderBy">Order By</Label>
+										<Input
+											type="text"
+											id="orderBy"
+											placeholder="Order By"
+											class="w-full"
+											bind:value={orderBy}
+										/>
+									</div>
+									<div class="flex flex-1 items-center gap-4 p-1">
+										<Label for="groupBy">Group By</Label>
+										<Input
+											type="text"
+											id="groupBy"
+											placeholder="Group By"
+											class="w-full"
+											bind:value={groupBy}
+										/>
 									</div>
 								</div>
 								<div class="mt-2 flex flex-1 border px-2">
-									<p>Table here</p>
+									<div class="h-50 flex">
+										{#if $columns.length > 0}
+											<DataTable
+												data={$rows}
+												columns={$columns}
+												{queryLoading}
+												query={$selectedQuery}
+											/>
+										{:else if queryLoading}
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+										{/if}
+									</div>
 								</div>
 							</div>
 						{:else if tableViewTab === 'structure'}
