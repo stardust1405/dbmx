@@ -57,7 +57,7 @@ func (t *Tabs) AddTab(activeDBID, activeDB, activeDBColour, tableName, tabType s
 	}
 
 	// Insert a new active tab
-	query := `INSERT INTO tabs (name, editor, output, is_active, active_db_id, active_db, active_db_colour, type, postgres_conn_id, db_name, postgres_conn_name, select, limit, offset, where, order_by, group_by) VALUES (?, '', '', true, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', '', '');`
+	query := `INSERT INTO tabs (name, editor, output, is_active, active_db_id, active_db, active_db_colour, type, postgres_conn_id, db_name, postgres_conn_name, "select", "limit", "offset", "where", "order_by", "group_by") VALUES (?, '', '', true, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', '', '');`
 	result, err := t.DB.Exec(query, name, active_db_id, active_db, active_db_colour, tabType, postgres_conn_id, db_name, postgresConnName)
 	if err != nil {
 		return nil, err

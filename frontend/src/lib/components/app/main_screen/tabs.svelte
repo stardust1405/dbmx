@@ -147,15 +147,15 @@
 		tableDBPoolID: string = '',
 		postgresConnName: string = ''
 	) {
-		var tableType = 'editor';
-		var tabDisplayName = 'Editor';
+		let tableType = 'editor';
+		let tabDisplayName = 'Editor';
 
 		// If table's pool id is provided, use that instead of the active pool id
 		// This is used when we want to open a table in a new tab
 		// In case of table, we want the pool id of the table's database
 
 		// First assign the active global pool id
-		var poolID: string = $activePoolID;
+		let poolID: string = $activePoolID;
 
 		// If table's pool id is provided, use that instead of the active pool id
 		if (tableName.trim() != '') {
@@ -173,39 +173,9 @@
 			postgresConnID,
 			dbName,
 			postgresConnName
-		).then((tab) => {
-			queryLoading = false;
-			tabsMap.set(tab.ID, tab);
-
-			tabID = tab.ID;
-			tabName = tab.Name;
-			tabType = tab.Type;
-
-			// Properties for table view tab
-			tabDBName = tab.DBName || '';
-			tabTableDBPoolID = tab.ActiveDBID || '';
-			tabPostgresConnName = tab.PostgresConnName || '';
-			tabPostgresConnID = tab.PostgresConnID || 0;
-
-			editor = tab.Editor;
-		});
-
-		$selectedDBDisplay = $selectedDBDisplay;
-		$activePoolID = $activePoolID;
-		$currentColor = $currentColor;
-
-		columns.set([]);
-		rows.set([]);
-	}
-
-	function deleteTab(id: number) {
-		// Delete the old tab from the map
-		tabsMap.delete(id);
-		DeleteTab(id).then((tab) => {
-			if (tab) {
+		)
+			.then((tab) => {
 				queryLoading = false;
-
-				// Set the new tab as active
 				tabsMap.set(tab.ID, tab);
 
 				tabID = tab.ID;
@@ -226,35 +196,92 @@
 				groupBy = tab.GroupBy;
 
 				editor = tab.Editor;
-
-				$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
-				$activePoolID = tab.ActiveDBID || '';
-				$currentColor = tab.ActiveDBColor || '';
-
-				if (tab.rows && tab.columns) {
-					// Update columns
-					for (const column of tab.columns) {
-						columns.set([
-							...$columns,
-							{
-								accessorKey: column,
-								header: column
-							}
-						]);
+			})
+			.catch((error) => {
+				toast.error('Failed to add tab', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
 					}
+				});
+			});
 
-					for (const row of tab.rows) {
-						let cell: Record<string, any> = {};
-						for (const resultCell of row) {
-							if (resultCell.column && resultCell.value) {
-								cell[resultCell.column] = resultCell.value;
-							}
+		$selectedDBDisplay = $selectedDBDisplay;
+		$activePoolID = $activePoolID;
+		$currentColor = $currentColor;
+
+		columns.set([]);
+		rows.set([]);
+	}
+
+	function deleteTab(id: number) {
+		// Delete the old tab from the map
+		tabsMap.delete(id);
+		DeleteTab(id)
+			.then((tab) => {
+				if (tab) {
+					queryLoading = false;
+
+					// Set the new tab as active
+					tabsMap.set(tab.ID, tab);
+
+					tabID = tab.ID;
+					tabName = tab.Name;
+					tabType = tab.Type;
+
+					// Properties for table view tab
+					tabDBName = tab.DBName || '';
+					tabTableDBPoolID = tab.ActiveDBID || '';
+					tabPostgresConnName = tab.PostgresConnName || '';
+					tabPostgresConnID = tab.PostgresConnID || 0;
+
+					select = tab.Select;
+					limit = tab.Limit;
+					offset = tab.Offset;
+					where = tab.Where;
+					orderBy = tab.OrderBy;
+					groupBy = tab.GroupBy;
+
+					editor = tab.Editor;
+
+					$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
+					$activePoolID = tab.ActiveDBID || '';
+					$currentColor = tab.ActiveDBColor || '';
+
+					if (tab.rows && tab.columns) {
+						// Update columns
+						for (const column of tab.columns) {
+							columns.set([
+								...$columns,
+								{
+									accessorKey: column,
+									header: column
+								}
+							]);
 						}
-						rows.set([...$rows, cell]);
+
+						for (const row of tab.rows) {
+							let cell: Record<string, any> = {};
+							for (const resultCell of row) {
+								if (resultCell.column && resultCell.value) {
+									cell[resultCell.column] = resultCell.value;
+								}
+							}
+							rows.set([...$rows, cell]);
+						}
 					}
 				}
-			}
-		});
+			})
+			.catch((error) => {
+				toast.error('Failed to delete tab', {
+					description: error,
+					action: {
+						label: 'OK',
+						onClick: () => console.info('OK')
+					}
+				});
+			});
 
 		columns.set([]);
 		rows.set([]);
@@ -638,17 +665,47 @@
 
 						<!-- Content based on selected tab -->
 						{#if tableViewTab === 'data'}
-							<div class="flex flex-1 flex-col">
+							<div class="flex h-screen flex-1 flex-col">
 								<div class="h-18 flex flex-col">
+									<div class="flex flex-1 items-center gap-2 p-1">
+										<Label for="select">Select</Label>
+										<Input
+											type="text"
+											id="select"
+											placeholder="Select"
+											class="w-full"
+											bind:value={select}
+										/>
+									</div>
+									<div class="flex flex-1 items-center gap-2 p-1">
+										<Label for="where">Where</Label>
+										<Input
+											type="text"
+											id="where"
+											placeholder="Where..."
+											class="w-full"
+											bind:value={where}
+										/>
+									</div>
 									<div class="flex flex-1 items-center p-1">
 										<div class="flex flex-1 items-center gap-2 p-1">
-											<Label for="select">Select</Label>
+											<Label for="orderBy">Order</Label>
 											<Input
 												type="text"
-												id="select"
-												placeholder="Select"
+												id="orderBy"
+												placeholder="Order By"
 												class="w-full"
-												bind:value={select}
+												bind:value={orderBy}
+											/>
+										</div>
+										<div class="flex flex-1 items-center gap-2 p-1">
+											<Label for="groupBy">Group</Label>
+											<Input
+												type="text"
+												id="groupBy"
+												placeholder="Group By"
+												class="w-full"
+												bind:value={groupBy}
 											/>
 										</div>
 										<div class="flex items-center gap-2 p-1">
@@ -672,39 +729,9 @@
 											/>
 										</div>
 									</div>
-									<div class="flex flex-1 items-center gap-2 p-1">
-										<Label for="where">Where</Label>
-										<Input
-											type="text"
-											id="where"
-											placeholder="Where..."
-											class="w-full"
-											bind:value={where}
-										/>
-									</div>
-									<div class="flex flex-1 items-center gap-4 p-1">
-										<Label for="orderBy">Order By</Label>
-										<Input
-											type="text"
-											id="orderBy"
-											placeholder="Order By"
-											class="w-full"
-											bind:value={orderBy}
-										/>
-									</div>
-									<div class="flex flex-1 items-center gap-4 p-1">
-										<Label for="groupBy">Group By</Label>
-										<Input
-											type="text"
-											id="groupBy"
-											placeholder="Group By"
-											class="w-full"
-											bind:value={groupBy}
-										/>
-									</div>
 								</div>
-								<div class="mt-2 flex flex-1 border px-2">
-									<div class="h-50 flex">
+								<div class="flex flex-1 overflow-auto border">
+									<div class="h-full w-full overflow-auto">
 										{#if $columns.length > 0}
 											<DataTable
 												data={$rows}
@@ -713,6 +740,11 @@
 												query={$selectedQuery}
 											/>
 										{:else if queryLoading}
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
+											<Skeleton class="my-3 h-[40px] w-full" />
 											<Skeleton class="my-3 h-[40px] w-full" />
 											<Skeleton class="my-3 h-[40px] w-full" />
 											<Skeleton class="my-3 h-[40px] w-full" />

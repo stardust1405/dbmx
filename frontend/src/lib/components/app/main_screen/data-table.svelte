@@ -35,7 +35,7 @@
 
 	let { data, columns, queryLoading, query }: DataTableProps<TData, TValue> = $props();
 
-	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
+	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
 	let sorting = $state<SortingState>([]);
 	let columnFilters = $state<ColumnFiltersState>([]);
 	let rowSelection = $state<RowSelectionState>({});
@@ -175,7 +175,7 @@
 		</div>
 
 		<div
-			class="position-sticky bottom-0 my-0.5 flex items-center justify-between rounded-lg px-4 py-1"
+			class="position-sticky bottom-0 my-0.5 flex w-full items-center justify-between rounded-lg px-4 py-1"
 		>
 			<div class="text-muted-foreground hidden flex-1 text-sm lg:flex">
 				{table.getFilteredRowModel().rows.length} row(s)
@@ -193,7 +193,7 @@
 							{table.getState().pagination.pageSize}
 						</Select.Trigger>
 						<Select.Content side="top">
-							{#each [10, 20, 30, 40, 50] as pageSize (pageSize)}
+							{#each [20, 30, 40, 50] as pageSize (pageSize)}
 								<Select.Item value={pageSize.toString()}>
 									{pageSize}
 								</Select.Item>
