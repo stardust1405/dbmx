@@ -11,6 +11,8 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
+	import * as Popover from '$lib/components/ui/popover/index.js';
+	import { Badge } from '$lib/components/ui/badge/index.js';
 
 	import * as Select from '$lib/components/ui/select/index.js';
 
@@ -66,6 +68,14 @@
 
 	// Table view tab state (for Data/Structure/Indexes)
 	let tableViewTab = $state('data');
+
+	// Multi-select input state
+	let selectedColumns = $state<string[]>([]);
+	let inputValue = $state('');
+	let showSuggestions = $state(false);
+	let filteredSuggestions = $state<string[]>([]);
+	let selectedIndex = $state(-1); // For arrow key navigation
+	let originalInputValue = $state(''); // Store original input when navigating
 
 	onMount(() => {
 		getAllTabs();
@@ -545,10 +555,139 @@
 		SaveActiveDBProps(tabID, $activePoolID, $selectedDBDisplay, $currentColor);
 	}
 
+	// Multi-select input functions
+	function handleInputChange(value: string) {
+		inputValue = value;
+		originalInputValue = value; // Store the original typed value
+		selectedIndex = -1; // Reset selection when typing
+		if (value.trim()) {
+			// Get available columns from suggestions (you might want to filter this to only columns)
+			const availableColumns = Array.from($suggestions).filter(
+				(s) => s.toLowerCase().includes(value.toLowerCase()) && !selectedColumns.includes(s)
+			);
+			filteredSuggestions = availableColumns.slice(0, 10); // Limit to 10 suggestions
+			showSuggestions = true;
+		} else {
+			showSuggestions = false;
+		}
+	}
+
+	function selectColumn(column: string) {
+		if (!selectedColumns.includes(column)) {
+			selectedColumns = [...selectedColumns, column];
+			updateSelectValue();
+		}
+		inputValue = '';
+		showSuggestions = false;
+		selectedIndex = -1;
+	}
+
+	function removeColumn(column: string) {
+		selectedColumns = selectedColumns.filter((c) => c !== column);
+		updateSelectValue();
+	}
+
+	function updateSelectValue() {
+		select = selectedColumns.join(', ');
+	}
+
+	function handleInputKeyDown(event: KeyboardEvent) {
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			if (filteredSuggestions.length > 0) {
+				// Store original input value when starting navigation
+				if (selectedIndex === -1) {
+					originalInputValue = inputValue;
+				}
+				selectedIndex = Math.min(selectedIndex + 1, filteredSuggestions.length - 1);
+				// Update input with selected suggestion
+				inputValue = filteredSuggestions[selectedIndex];
+				showSuggestions = true;
+				scrollToSelectedItem();
+			}
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			if (filteredSuggestions.length > 0) {
+				// Store original input value when starting navigation
+				if (selectedIndex === -1) {
+					originalInputValue = inputValue;
+				}
+				selectedIndex = Math.max(selectedIndex - 1, -1);
+				// Update input with selected suggestion or restore original
+				if (selectedIndex === -1) {
+					inputValue = originalInputValue;
+				} else {
+					inputValue = filteredSuggestions[selectedIndex];
+				}
+				scrollToSelectedItem();
+			}
+		} else if (event.key === 'Enter') {
+			event.preventDefault();
+			if (selectedIndex >= 0 && filteredSuggestions[selectedIndex]) {
+				selectColumn(filteredSuggestions[selectedIndex]);
+			} else if (inputValue.trim()) {
+				selectColumn(inputValue.trim());
+			}
+		} else if (event.key === 'Escape') {
+			showSuggestions = false;
+			selectedIndex = -1;
+			// Restore original input value
+			inputValue = originalInputValue;
+		} else if (event.key === 'Backspace' && !inputValue && selectedColumns.length > 0) {
+			// Remove last chip when backspace is pressed and input is empty
+			event.preventDefault();
+			const lastColumn = selectedColumns[selectedColumns.length - 1];
+			removeColumn(lastColumn);
+		}
+	}
+
+	function scrollToSelectedItem() {
+		if (selectedIndex >= 0) {
+			// Use setTimeout to ensure DOM is updated
+			setTimeout(() => {
+				const suggestionsList = document.getElementById('suggestions-list');
+				const selectedItem = suggestionsList?.querySelector(`[data-index="${selectedIndex}"]`);
+				if (selectedItem && suggestionsList) {
+					selectedItem.scrollIntoView({
+						behavior: 'smooth',
+						block: 'nearest'
+					});
+				}
+			}, 0);
+		}
+	}
+
 	$effect(() => {
 		if ($activeDBs.length == 0) {
 			$selectedDBDisplay = 'Connect to a database';
 			$currentColor = '';
+		}
+	});
+
+	// Initialize selectedColumns from select value
+	$effect(() => {
+		if (select && select.trim()) {
+			selectedColumns = select
+				.split(',')
+				.map((s) => s.trim())
+				.filter((s) => s);
+		} else {
+			selectedColumns = [];
+		}
+	});
+
+	// Handle clicking outside to close suggestions
+	$effect(() => {
+		function handleClickOutside(event: MouseEvent) {
+			const target = event.target as Element;
+			if (!target.closest('.multi-select-container')) {
+				showSuggestions = false;
+			}
+		}
+
+		if (showSuggestions) {
+			document.addEventListener('click', handleClickOutside);
+			return () => document.removeEventListener('click', handleClickOutside);
 		}
 	});
 
@@ -669,13 +808,89 @@
 								<div class="h-18 flex flex-col">
 									<div class="flex flex-1 items-center gap-2 p-1">
 										<Label for="select">Select</Label>
-										<Input
-											type="text"
-											id="select"
-											placeholder="Select"
-											class="w-full"
-											bind:value={select}
-										/>
+										<div class="multi-select-container relative w-full">
+											<div
+												class="border-input bg-background ring-offset-background focus-within:ring-ring flex min-h-10 w-full flex-wrap items-center gap-1 rounded-md border px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-offset-2"
+												role="combobox"
+												tabindex="0"
+												aria-expanded={showSuggestions}
+												aria-controls="suggestions-list"
+												onclick={() => (showSuggestions = true)}
+												onkeydown={(e) => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.preventDefault();
+														showSuggestions = true;
+													}
+												}}
+											>
+												<!-- Selected chips -->
+												{#each selectedColumns as column}
+													<Badge variant="secondary" class="flex items-center gap-1">
+														{column}
+														<button
+															type="button"
+															class="hover:bg-muted ml-1 rounded-full"
+															onclick={(e) => {
+																e.stopPropagation();
+																removeColumn(column);
+															}}
+														>
+															<X class="h-3 w-3" />
+														</button>
+													</Badge>
+												{/each}
+												<!-- Input field -->
+												<input
+													type="text"
+													placeholder={selectedColumns.length === 0 ? 'Select columns...' : ''}
+													class="placeholder:text-muted-foreground flex-1 bg-transparent outline-none"
+													bind:value={inputValue}
+													oninput={(e) => handleInputChange(e.currentTarget.value)}
+													onkeydown={handleInputKeyDown}
+													onfocus={() => (showSuggestions = true)}
+												/>
+											</div>
+
+											<!-- Suggestions dropdown -->
+											{#if showSuggestions && (filteredSuggestions.length > 0 || inputValue.trim())}
+												<div
+													id="suggestions-list"
+													class="bg-popover absolute left-0 right-0 top-full z-50 mt-1 rounded-md border p-0 shadow-md"
+												>
+													{#if filteredSuggestions.length > 0}
+														<div class="max-h-60 overflow-auto">
+															{#each filteredSuggestions as suggestion, index}
+																<button
+																	type="button"
+																	class="hover:bg-muted w-full px-3 py-2 text-left text-sm {selectedIndex ===
+																	index
+																		? 'bg-muted'
+																		: ''}"
+																	data-index={index}
+																	onclick={() => selectColumn(suggestion)}
+																	onmouseenter={() => {
+																		selectedIndex = index;
+																		inputValue = suggestion;
+																	}}
+																	onmouseleave={() => {
+																		if (selectedIndex === index) {
+																			inputValue = originalInputValue;
+																			selectedIndex = -1;
+																		}
+																	}}
+																>
+																	{suggestion}
+																</button>
+															{/each}
+														</div>
+													{:else if inputValue.trim()}
+														<div class="text-muted-foreground px-3 py-2 text-sm">
+															No suggestions found
+														</div>
+													{/if}
+												</div>
+											{/if}
+										</div>
 									</div>
 									<div class="flex flex-1 items-center gap-2 p-1">
 										<Label for="where">Where</Label>
