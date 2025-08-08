@@ -367,6 +367,9 @@
 
 		columns.set([]);
 		rows.set([]);
+		inputValue = '';
+		showSuggestions = true;
+		originalInputValue = '';
 	}
 
 	function getColorClass(color: string): string {
@@ -560,16 +563,10 @@
 		inputValue = value;
 		originalInputValue = value; // Store the original typed value
 		selectedIndex = -1; // Reset selection when typing
-		if (value.trim()) {
-			// Get available columns from suggestions (you might want to filter this to only columns)
-			const availableColumns = Array.from($suggestions).filter(
-				(s) => s.toLowerCase().includes(value.toLowerCase()) && !selectedColumns.includes(s)
-			);
-			filteredSuggestions = availableColumns.slice(0, 10); // Limit to 10 suggestions
-			showSuggestions = true;
-		} else {
-			showSuggestions = false;
-		}
+		showSuggestions = true;
+		filteredSuggestions = Array.from($suggestions).filter(
+			(s) => s.toLowerCase().includes(value.toLowerCase()) && !selectedColumns.includes(s)
+		);
 	}
 
 	function selectColumn(column: string) {
@@ -578,7 +575,7 @@
 			updateSelectValue();
 		}
 		inputValue = '';
-		showSuggestions = false;
+		showSuggestions = true;
 		selectedIndex = -1;
 	}
 
@@ -810,7 +807,7 @@
 										<Label for="select">Select</Label>
 										<div class="multi-select-container relative w-full">
 											<div
-												class="border-input bg-background ring-offset-background focus-within:ring-ring flex min-h-10 w-full flex-wrap items-center gap-1 rounded-md border px-3 py-2 text-sm focus-within:ring-2 focus-within:ring-offset-2"
+												class="border-input bg-background ring-offset-background focus-within:ring-ring flex w-full flex-wrap items-center gap-1 rounded-md border px-3 py-2 text-sm focus-within:ring-1"
 												role="combobox"
 												tabindex="0"
 												aria-expanded={showSuggestions}
@@ -847,7 +844,7 @@
 													bind:value={inputValue}
 													oninput={(e) => handleInputChange(e.currentTarget.value)}
 													onkeydown={handleInputKeyDown}
-													onfocus={() => (showSuggestions = true)}
+													onfocus={() => handleInputChange(inputValue)}
 												/>
 											</div>
 
