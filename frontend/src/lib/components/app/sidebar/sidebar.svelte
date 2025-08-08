@@ -321,6 +321,7 @@
 	{tabPostgresConnID}
 	{tabDBName}
 	{...restProps}
+	variant="floating"
 >
 	<Sidebar.Content>
 		<Sidebar.Group>
@@ -354,10 +355,10 @@
 								<Collapsible.Content>
 									<Sidebar.MenuSub>
 										{#if loadingMap.get(connection.ID)}
-											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
-											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
-											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
-											<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+											<Sidebar.MenuSkeleton />
+											<Sidebar.MenuSkeleton />
+											<Sidebar.MenuSkeleton />
+											<Sidebar.MenuSkeleton />
 										{:else if (connectionDatabasesMap.get(connection.ID) || []).length > 0}
 											{#each connectionDatabasesMap.get(connection.ID) || [] as databaseID}
 												<Collapsible.Root open={databasesMap.get(databaseID)?.IsActive}>
@@ -390,10 +391,10 @@
 													<Collapsible.Content>
 														<Sidebar.MenuSub>
 															{#if dbLoadingMap.get(databaseID)}
-																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
-																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
-																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
-																<Skeleton class="my-1 h-[20px] w-[100px] rounded-full" />
+																<Sidebar.MenuSkeleton />
+																<Sidebar.MenuSkeleton />
+																<Sidebar.MenuSkeleton />
+																<Sidebar.MenuSkeleton />
 															{:else if (databasesMap.get(databaseID)?.Tables || []).length > 0}
 																{#each databasesMap.get(databaseID)?.Tables || [] as table}
 																	<ContextMenu.Root>
