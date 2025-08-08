@@ -112,7 +112,7 @@
 
 <div class="h-full overflow-auto">
 	<div class="flex h-full flex-col">
-		<div class="position-sticky top-0 flex flex-1 overflow-auto rounded-lg">
+		<div class="position-sticky top-0 flex flex-1 overflow-auto">
 			<Table.Root>
 				<Table.Header class=" bg-purple-500 bg-opacity-20 text-xs font-medium">
 					{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}

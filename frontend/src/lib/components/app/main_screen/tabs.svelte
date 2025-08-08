@@ -583,13 +583,13 @@
 	});
 </script>
 
-<div class="flex h-full flex-1 flex-col overflow-hidden border">
+<div class="my-2 flex h-full flex-1 flex-col overflow-hidden rounded-md border">
 	<Tabs.Root value={tabID.toString()} class="flex h-full flex-1 flex-col overflow-hidden">
 		<!-- Tabs visible in the header -->
-		<header class="flex h-12 items-center gap-2 overflow-auto border-b px-4">
+		<header class="flex h-12 items-center gap-2 border-b px-4">
 			<Sidebar.Trigger class="-ml-1" />
 			<Separator orientation="vertical" />
-			<Tabs.List>
+			<Tabs.List class="thin-scrollbar scrollbar-thin overflow-x-auto overflow-y-hidden">
 				{#each Array.from(tabsMap.entries()) as [key, tab]}
 					<div class="mr-2 flex rounded-sm bg-slate-800">
 						<Tabs.Trigger
@@ -621,7 +621,7 @@
 
 			{#if tabType == 'table'}
 				<div class="flex h-screen flex-1 flex-col">
-					<div class="flex h-full flex-1 flex-col justify-center px-2">
+					<div class="flex h-full flex-1 flex-col justify-center">
 						<!-- Breadcrumb -->
 						<div class="mt-1 flex items-center justify-between">
 							<div class="flex items-center px-2">
@@ -687,7 +687,7 @@
 											bind:value={where}
 										/>
 									</div>
-									<div class="flex flex-1 items-center p-1">
+									<div class="flex flex-1 items-center p-1 pt-0">
 										<div class="flex flex-1 items-center gap-2 p-1">
 											<Label for="orderBy">Order</Label>
 											<Input
@@ -730,7 +730,7 @@
 										</div>
 									</div>
 								</div>
-								<div class="flex flex-1 overflow-auto border">
+								<div class="flex flex-1 overflow-auto rounded-md border">
 									<div class="h-full w-full overflow-auto">
 										{#if $columns.length > 0}
 											<DataTable
@@ -768,7 +768,7 @@
 					</div>
 				</div>
 			{:else}
-				<div class="flex h-screen flex-1 flex-col px-4">
+				<div class="flex h-screen flex-1 flex-col rounded-md">
 					<Tabs.Content value={tabID.toString()} class="flex-1 overflow-hidden">
 						<div class="flex h-full flex-col">
 							<!-- Active DB Selector and Execute Query Button -->
@@ -855,3 +855,30 @@
 		{/if}
 	</Tabs.Root>
 </div>
+
+<style>
+	:global(.thin-scrollbar) {
+		/* Firefox */
+		scrollbar-width: thin;
+		scrollbar-color: #4a5568 #2d3748;
+	}
+
+	:global(.thin-scrollbar::-webkit-scrollbar) {
+		height: 1px; /* Horizontal scrollbar height */
+		width: 1px; /* Vertical scrollbar width */
+	}
+
+	:global(.thin-scrollbar::-webkit-scrollbar-track) {
+		background: #2d3748;
+		border-radius: 1px;
+	}
+
+	:global(.thin-scrollbar::-webkit-scrollbar-thumb) {
+		background: #4a5568;
+		border-radius: 1px;
+	}
+
+	:global(.thin-scrollbar::-webkit-scrollbar-thumb:hover) {
+		background: #718096;
+	}
+</style>
