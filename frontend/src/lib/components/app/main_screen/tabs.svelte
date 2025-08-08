@@ -69,13 +69,21 @@
 	// Table view tab state (for Data/Structure/Indexes)
 	let tableViewTab = $state('data');
 
-	// Multi-select input state
+	// Multi-select input state for SELECT
 	let selectedColumns = $state<string[]>([]);
 	let inputValue = $state('');
 	let showSuggestions = $state(false);
 	let filteredSuggestions = $state<string[]>([]);
 	let selectedIndex = $state(-1); // For arrow key navigation
 	let originalInputValue = $state(''); // Store original input when navigating
+
+	// Multi-select input state for WHERE
+	let selectedWhereColumns = $state<string[]>([]);
+	let whereInputValue = $state('');
+	let showWhereSuggestions = $state(false);
+	let filteredWhereSuggestions = $state<string[]>([]);
+	let selectedWhereIndex = $state(-1);
+	let originalWhereInputValue = $state('');
 
 	onMount(() => {
 		getAllTabs();
@@ -564,6 +572,7 @@
 		originalInputValue = value; // Store the original typed value
 		selectedIndex = -1; // Reset selection when typing
 		showSuggestions = true;
+		showWhereSuggestions = false;
 		filteredSuggestions = Array.from($suggestions).filter(
 			(s) => s.toLowerCase().includes(value.toLowerCase()) && !selectedColumns.includes(s)
 		);
@@ -654,6 +663,96 @@
 		}
 	}
 
+	// WHERE input functions (similar to SELECT functions)
+	function handleWhereInputChange(value: string) {
+		whereInputValue = value;
+		originalWhereInputValue = value;
+		selectedWhereIndex = -1;
+		showWhereSuggestions = true;
+		showSuggestions = false;
+		filteredWhereSuggestions = Array.from($suggestions).filter(
+			(s) => s.toLowerCase().includes(value.toLowerCase()) && !selectedWhereColumns.includes(s)
+		);
+	}
+
+	function selectWhereColumn(column: string) {
+		if (!selectedWhereColumns.includes(column)) {
+			selectedWhereColumns = [...selectedWhereColumns, column];
+			updateWhereValue();
+		}
+		whereInputValue = '';
+		showWhereSuggestions = false;
+		selectedWhereIndex = -1;
+	}
+
+	function removeWhereColumn(column: string) {
+		selectedWhereColumns = selectedWhereColumns.filter((c) => c !== column);
+		updateWhereValue();
+	}
+
+	function updateWhereValue() {
+		where = selectedWhereColumns.join(' AND ');
+	}
+
+	function handleWhereInputKeyDown(event: KeyboardEvent) {
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			if (filteredWhereSuggestions.length > 0) {
+				if (selectedWhereIndex === -1) {
+					originalWhereInputValue = whereInputValue;
+				}
+				selectedWhereIndex = Math.min(selectedWhereIndex + 1, filteredWhereSuggestions.length - 1);
+				whereInputValue = filteredWhereSuggestions[selectedWhereIndex];
+				showWhereSuggestions = true;
+				scrollToSelectedWhereItem();
+			}
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			if (filteredWhereSuggestions.length > 0) {
+				if (selectedWhereIndex === -1) {
+					originalWhereInputValue = whereInputValue;
+				}
+				selectedWhereIndex = Math.max(selectedWhereIndex - 1, -1);
+				if (selectedWhereIndex === -1) {
+					whereInputValue = originalWhereInputValue;
+				} else {
+					whereInputValue = filteredWhereSuggestions[selectedWhereIndex];
+				}
+				scrollToSelectedWhereItem();
+			}
+		} else if (event.key === 'Enter') {
+			event.preventDefault();
+			if (selectedWhereIndex >= 0 && filteredWhereSuggestions[selectedWhereIndex]) {
+				selectWhereColumn(filteredWhereSuggestions[selectedWhereIndex]);
+			} else if (whereInputValue.trim()) {
+				selectWhereColumn(whereInputValue.trim());
+			}
+		} else if (event.key === 'Escape') {
+			showWhereSuggestions = false;
+			selectedWhereIndex = -1;
+			whereInputValue = originalWhereInputValue;
+		} else if (event.key === 'Backspace' && !whereInputValue && selectedWhereColumns.length > 0) {
+			event.preventDefault();
+			const lastColumn = selectedWhereColumns[selectedWhereColumns.length - 1];
+			removeWhereColumn(lastColumn);
+		}
+	}
+
+	function scrollToSelectedWhereItem() {
+		if (selectedWhereIndex >= 0) {
+			setTimeout(() => {
+				const suggestionsList = document.getElementById('where-suggestions-list');
+				const selectedItem = suggestionsList?.querySelector(`[data-index="${selectedWhereIndex}"]`);
+				if (selectedItem && suggestionsList) {
+					selectedItem.scrollIntoView({
+						behavior: 'smooth',
+						block: 'nearest'
+					});
+				}
+			}, 0);
+		}
+	}
+
 	$effect(() => {
 		if ($activeDBs.length == 0) {
 			$selectedDBDisplay = 'Connect to a database';
@@ -673,16 +772,29 @@
 		}
 	});
 
+	// Initialize selectedWhereColumns from where value
+	$effect(() => {
+		if (where && where.trim()) {
+			selectedWhereColumns = where
+				.split(' AND ')
+				.map((s) => s.trim())
+				.filter((s) => s);
+		} else {
+			selectedWhereColumns = [];
+		}
+	});
+
 	// Handle clicking outside to close suggestions
 	$effect(() => {
 		function handleClickOutside(event: MouseEvent) {
 			const target = event.target as Element;
 			if (!target.closest('.multi-select-container')) {
 				showSuggestions = false;
+				showWhereSuggestions = false;
 			}
 		}
 
-		if (showSuggestions) {
+		if (showSuggestions || showWhereSuggestions) {
 			document.addEventListener('click', handleClickOutside);
 			return () => document.removeEventListener('click', handleClickOutside);
 		}
@@ -891,13 +1003,91 @@
 									</div>
 									<div class="flex flex-1 items-center gap-2 p-1">
 										<Label for="where">Where</Label>
-										<Input
-											type="text"
-											id="where"
-											placeholder="Where..."
-											class="w-full"
-											bind:value={where}
-										/>
+										<div class="multi-select-container relative w-full">
+											<div
+												class="border-input bg-background ring-offset-background focus-within:ring-ring flex min-h-10 w-full flex-wrap items-center gap-1 rounded-md border px-3 py-2 text-sm focus-within:ring-1"
+												role="combobox"
+												tabindex="0"
+												aria-expanded={showWhereSuggestions}
+												aria-controls="where-suggestions-list"
+												onclick={() => (showWhereSuggestions = true)}
+												onkeydown={(e) => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.preventDefault();
+														showWhereSuggestions = true;
+													}
+												}}
+											>
+												<!-- Selected chips -->
+												{#each selectedWhereColumns as column}
+													<Badge variant="secondary" class="flex items-center gap-1">
+														{column}
+														<button
+															type="button"
+															class="hover:bg-muted ml-1 rounded-full"
+															onclick={(e) => {
+																e.stopPropagation();
+																removeWhereColumn(column);
+															}}
+														>
+															<X class="h-3 w-3" />
+														</button>
+													</Badge>
+												{/each}
+												<!-- Input field -->
+												<input
+													type="text"
+													placeholder={selectedWhereColumns.length === 0
+														? 'Where conditions...'
+														: ''}
+													class="placeholder:text-muted-foreground flex-1 bg-transparent outline-none"
+													bind:value={whereInputValue}
+													oninput={(e) => handleWhereInputChange(e.currentTarget.value)}
+													onkeydown={handleWhereInputKeyDown}
+													onfocus={() => handleWhereInputChange(whereInputValue)}
+												/>
+											</div>
+
+											<!-- Suggestions dropdown -->
+											{#if showWhereSuggestions && (filteredWhereSuggestions.length > 0 || whereInputValue.trim())}
+												<div
+													id="where-suggestions-list"
+													class="bg-popover absolute left-0 right-0 top-full z-50 mt-1 rounded-md border p-0 shadow-md"
+												>
+													{#if filteredWhereSuggestions.length > 0}
+														<div class="max-h-60 overflow-auto">
+															{#each filteredWhereSuggestions as suggestion, index}
+																<button
+																	type="button"
+																	class="hover:bg-muted w-full px-3 py-2 text-left text-sm {selectedWhereIndex ===
+																	index
+																		? 'bg-muted'
+																		: ''}"
+																	data-index={index}
+																	onclick={() => selectWhereColumn(suggestion)}
+																	onmouseenter={() => {
+																		selectedWhereIndex = index;
+																		whereInputValue = suggestion;
+																	}}
+																	onmouseleave={() => {
+																		if (selectedWhereIndex === index) {
+																			whereInputValue = originalWhereInputValue;
+																			selectedWhereIndex = -1;
+																		}
+																	}}
+																>
+																	{suggestion}
+																</button>
+															{/each}
+														</div>
+													{:else if whereInputValue.trim()}
+														<div class="text-muted-foreground px-3 py-2 text-sm">
+															No suggestions found
+														</div>
+													{/if}
+												</div>
+											{/if}
+										</div>
 									</div>
 									<div class="flex flex-1 items-center p-1 pt-0">
 										<div class="flex flex-1 items-center gap-2 p-1">
