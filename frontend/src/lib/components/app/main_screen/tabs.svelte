@@ -76,6 +76,9 @@
 	let filteredSuggestions = $state<string[]>([]);
 	let selectedIndex = $state(-1); // For arrow key navigation
 	let originalInputValue = $state(''); // Store original input when navigating
+	let focusedChipIndex = $state(-1); // For chip navigation
+	let editingChipIndex = $state(-1); // For chip editing
+	let editingChipValue = $state(''); // Value being edited
 
 	// Multi-select input state for WHERE
 	let selectedWhereColumns = $state<string[]>([]);
@@ -84,6 +87,9 @@
 	let filteredWhereSuggestions = $state<string[]>([]);
 	let selectedWhereIndex = $state(-1);
 	let originalWhereInputValue = $state('');
+	let focusedWhereChipIndex = $state(-1);
+	let editingWhereChipIndex = $state(-1);
+	let editingWhereChipValue = $state('');
 
 	onMount(() => {
 		getAllTabs();
@@ -598,6 +604,15 @@
 	}
 
 	function handleInputKeyDown(event: KeyboardEvent) {
+		// Handle chip navigation when input is empty
+		if (!inputValue && selectedColumns.length > 0) {
+			if (event.key === 'ArrowLeft') {
+				event.preventDefault();
+				focusedChipIndex = Math.max(0, selectedColumns.length - 1);
+				return;
+			}
+		}
+
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
 			if (filteredSuggestions.length > 0) {
@@ -645,6 +660,75 @@
 			const lastColumn = selectedColumns[selectedColumns.length - 1];
 			removeColumn(lastColumn);
 		}
+	}
+
+	function handleChipKeyDown(event: KeyboardEvent, chipIndex: number) {
+		// Don't handle navigation if we're currently editing this chip
+		if (editingChipIndex === chipIndex) {
+			return;
+		}
+
+		if (event.key === 'ArrowLeft') {
+			event.preventDefault();
+			focusedChipIndex = Math.max(0, chipIndex - 1);
+		} else if (event.key === 'ArrowRight') {
+			event.preventDefault();
+			if (chipIndex < selectedColumns.length - 1) {
+				focusedChipIndex = chipIndex + 1;
+			} else {
+				// Move focus back to input
+				focusedChipIndex = -1;
+				const input = document.querySelector('.select-input') as HTMLInputElement;
+				input?.focus();
+			}
+		} else if (event.key === ' ' || event.key === 'Enter') {
+			event.preventDefault();
+			startEditingChip(chipIndex);
+		} else if (event.key === 'Delete' || event.key === 'Backspace') {
+			event.preventDefault();
+			removeColumn(selectedColumns[chipIndex]);
+			focusedChipIndex = Math.min(chipIndex, selectedColumns.length - 2);
+		}
+	}
+
+	function startEditingChip(chipIndex: number) {
+		editingChipIndex = chipIndex;
+		editingChipValue = selectedColumns[chipIndex];
+		setTimeout(() => {
+			const input = document.querySelector('.chip-edit-input') as HTMLInputElement;
+			input?.focus();
+			// Position cursor at the end instead of selecting all text
+			input?.setSelectionRange(input.value.length, input.value.length);
+		}, 0);
+	}
+
+	function finishEditingChip() {
+		const wasEditingIndex = editingChipIndex;
+		if (editingChipIndex >= 0 && editingChipValue.trim()) {
+			selectedColumns[editingChipIndex] = editingChipValue.trim();
+			updateSelectValue();
+		}
+		editingChipIndex = -1;
+		editingChipValue = '';
+		// Restore focus to the chip that was being edited
+		setTimeout(() => {
+			focusedChipIndex = wasEditingIndex;
+			const chip = document.querySelector(`[data-chip-index="${wasEditingIndex}"]`) as HTMLElement;
+			chip?.focus();
+		}, 10);
+	}
+
+	function cancelEditingChip() {
+		const wasEditingIndex = editingChipIndex;
+		editingChipIndex = -1;
+		editingChipValue = '';
+		// Restore focus to the chip that was being edited
+		setTimeout(() => {
+			focusedChipIndex = wasEditingIndex;
+			// Ensure the chip element gets focus
+			const chip = document.querySelector(`[data-chip-index="${wasEditingIndex}"]`) as HTMLElement;
+			chip?.focus();
+		}, 10); // Slightly longer delay to ensure DOM is updated
 	}
 
 	function scrollToSelectedItem() {
@@ -695,6 +779,15 @@
 	}
 
 	function handleWhereInputKeyDown(event: KeyboardEvent) {
+		// Handle chip navigation when input is empty
+		if (!whereInputValue && selectedWhereColumns.length > 0) {
+			if (event.key === 'ArrowLeft') {
+				event.preventDefault();
+				focusedWhereChipIndex = Math.max(0, selectedWhereColumns.length - 1);
+				return;
+			}
+		}
+
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
 			if (filteredWhereSuggestions.length > 0) {
@@ -736,6 +829,79 @@
 			const lastColumn = selectedWhereColumns[selectedWhereColumns.length - 1];
 			removeWhereColumn(lastColumn);
 		}
+	}
+
+	function handleWhereChipKeyDown(event: KeyboardEvent, chipIndex: number) {
+		// Don't handle navigation if we're currently editing this chip
+		if (editingWhereChipIndex === chipIndex) {
+			return;
+		}
+
+		if (event.key === 'ArrowLeft') {
+			event.preventDefault();
+			focusedWhereChipIndex = Math.max(0, chipIndex - 1);
+		} else if (event.key === 'ArrowRight') {
+			event.preventDefault();
+			if (chipIndex < selectedWhereColumns.length - 1) {
+				focusedWhereChipIndex = chipIndex + 1;
+			} else {
+				// Move focus back to input
+				focusedWhereChipIndex = -1;
+				const input = document.querySelector('.where-input') as HTMLInputElement;
+				input?.focus();
+			}
+		} else if (event.key === ' ' || event.key === 'Enter') {
+			event.preventDefault();
+			startEditingWhereChip(chipIndex);
+		} else if (event.key === 'Delete' || event.key === 'Backspace') {
+			event.preventDefault();
+			removeWhereColumn(selectedWhereColumns[chipIndex]);
+			focusedWhereChipIndex = Math.min(chipIndex, selectedWhereColumns.length - 2);
+		}
+	}
+
+	function startEditingWhereChip(chipIndex: number) {
+		editingWhereChipIndex = chipIndex;
+		editingWhereChipValue = selectedWhereColumns[chipIndex];
+		setTimeout(() => {
+			const input = document.querySelector('.where-chip-edit-input') as HTMLInputElement;
+			input?.focus();
+			// Position cursor at the end instead of selecting all text
+			input?.setSelectionRange(input.value.length, input.value.length);
+		}, 0);
+	}
+
+	function finishEditingWhereChip() {
+		const wasEditingIndex = editingWhereChipIndex;
+		if (editingWhereChipIndex >= 0 && editingWhereChipValue.trim()) {
+			selectedWhereColumns[editingWhereChipIndex] = editingWhereChipValue.trim();
+			updateWhereValue();
+		}
+		editingWhereChipIndex = -1;
+		editingWhereChipValue = '';
+		// Restore focus to the chip that was being edited
+		setTimeout(() => {
+			focusedWhereChipIndex = wasEditingIndex;
+			const chip = document.querySelector(
+				`[data-where-chip-index="${wasEditingIndex}"]`
+			) as HTMLElement;
+			chip?.focus();
+		}, 10);
+	}
+
+	function cancelEditingWhereChip() {
+		const wasEditingIndex = editingWhereChipIndex;
+		editingWhereChipIndex = -1;
+		editingWhereChipValue = '';
+		// Restore focus to the chip that was being edited
+		setTimeout(() => {
+			focusedWhereChipIndex = wasEditingIndex;
+			// Ensure the chip element gets focus
+			const chip = document.querySelector(
+				`[data-where-chip-index="${wasEditingIndex}"]`
+			) as HTMLElement;
+			chip?.focus();
+		}, 10); // Slightly longer delay to ensure DOM is updated
 	}
 
 	function scrollToSelectedWhereItem() {
@@ -797,6 +963,23 @@
 		if (showSuggestions || showWhereSuggestions) {
 			document.addEventListener('click', handleClickOutside);
 			return () => document.removeEventListener('click', handleClickOutside);
+		}
+	});
+
+	// Focus management for chips
+	$effect(() => {
+		if (focusedChipIndex >= 0) {
+			const chip = document.querySelector(`[data-chip-index="${focusedChipIndex}"]`) as HTMLElement;
+			chip?.focus();
+		}
+	});
+
+	$effect(() => {
+		if (focusedWhereChipIndex >= 0) {
+			const chip = document.querySelector(
+				`[data-where-chip-index="${focusedWhereChipIndex}"]`
+			) as HTMLElement;
+			chip?.focus();
 		}
 	});
 
@@ -919,23 +1102,56 @@
 										<Label for="select">Select</Label>
 										<div class="multi-select-container relative w-full">
 											<div
-												class="border-input bg-background ring-offset-background focus-within:ring-ring flex w-full flex-wrap items-center gap-1 rounded-md border px-3 py-2 text-sm focus-within:ring-1"
+												class="border-input bg-background flex w-full cursor-text flex-wrap items-center gap-1 rounded-md border px-3 py-2 text-sm"
 												role="combobox"
-												tabindex="0"
+												tabindex="-1"
 												aria-expanded={showSuggestions}
 												aria-controls="suggestions-list"
-												onclick={() => (showSuggestions = true)}
-												onkeydown={(e) => {
-													if (e.key === 'Enter' || e.key === ' ') {
-														e.preventDefault();
-														showSuggestions = true;
-													}
+												onclick={(e) => {
+													// Focus the input when clicking anywhere in the container
+													const input = e.currentTarget.querySelector(
+														'.select-input'
+													) as HTMLInputElement;
+													input?.focus();
+													showSuggestions = true;
 												}}
 											>
 												<!-- Selected chips -->
-												{#each selectedColumns as column}
-													<Badge variant="secondary" class="flex items-center gap-1">
-														{column}
+												{#each selectedColumns as column, index}
+													<div
+														class="bg-secondary focus:ring-ring flex items-center gap-1 rounded-md px-2.5 py-0.5 text-xs transition-colors focus:outline-none {focusedChipIndex ===
+														index
+															? 'ring-ring ring-1'
+															: ''}"
+														tabindex="0"
+														role="button"
+														data-chip-index={index}
+														onkeydown={(e) => handleChipKeyDown(e, index)}
+														ondblclick={() => startEditingChip(index)}
+														onclick={() => {
+															focusedChipIndex = index;
+														}}
+													>
+														{#if editingChipIndex === index}
+															<input
+																type="text"
+																class="chip-edit-input w-20 border-none bg-transparent text-xs outline-none"
+																bind:value={editingChipValue}
+																onblur={finishEditingChip}
+																onkeydown={(e) => {
+																	if (e.key === 'Enter') {
+																		e.preventDefault();
+																		finishEditingChip();
+																	} else if (e.key === 'Escape') {
+																		e.preventDefault();
+																		e.stopPropagation();
+																		cancelEditingChip();
+																	}
+																}}
+															/>
+														{:else}
+															{column}
+														{/if}
 														<button
 															type="button"
 															class="hover:bg-muted ml-1 rounded-full"
@@ -946,17 +1162,20 @@
 														>
 															<X class="h-3 w-3" />
 														</button>
-													</Badge>
+													</div>
 												{/each}
 												<!-- Input field -->
 												<input
 													type="text"
 													placeholder={selectedColumns.length === 0 ? 'Select columns...' : ''}
-													class="placeholder:text-muted-foreground flex-1 bg-transparent outline-none"
+													class="select-input placeholder:text-muted-foreground flex-1 bg-transparent outline-none"
 													bind:value={inputValue}
 													oninput={(e) => handleInputChange(e.currentTarget.value)}
 													onkeydown={handleInputKeyDown}
-													onfocus={() => handleInputChange(inputValue)}
+													onfocus={() => {
+														showSuggestions = true;
+														focusedChipIndex = -1;
+													}}
 												/>
 											</div>
 
@@ -1005,23 +1224,56 @@
 										<Label for="where">Where</Label>
 										<div class="multi-select-container relative w-full">
 											<div
-												class="border-input bg-background ring-offset-background focus-within:ring-ring flex min-h-10 w-full flex-wrap items-center gap-1 rounded-md border px-3 py-2 text-sm focus-within:ring-1"
+												class="border-input bg-background flex min-h-10 w-full cursor-text flex-wrap items-center gap-1 rounded-md border px-3 py-2 text-sm"
 												role="combobox"
-												tabindex="0"
+												tabindex="-1"
 												aria-expanded={showWhereSuggestions}
 												aria-controls="where-suggestions-list"
-												onclick={() => (showWhereSuggestions = true)}
-												onkeydown={(e) => {
-													if (e.key === 'Enter' || e.key === ' ') {
-														e.preventDefault();
-														showWhereSuggestions = true;
-													}
+												onclick={(e) => {
+													// Focus the input when clicking anywhere in the container
+													const input = e.currentTarget.querySelector(
+														'.where-input'
+													) as HTMLInputElement;
+													input?.focus();
+													showWhereSuggestions = true;
 												}}
 											>
 												<!-- Selected chips -->
-												{#each selectedWhereColumns as column}
-													<Badge variant="secondary" class="flex items-center gap-1">
-														{column}
+												{#each selectedWhereColumns as column, index}
+													<div
+														class="bg-secondary flex items-center gap-1 rounded-md px-2.5 py-0.5 text-xs transition-colors focus:outline-none {focusedWhereChipIndex ===
+														index
+															? 'ring-ring ring-1'
+															: ''}"
+														tabindex="0"
+														role="button"
+														data-where-chip-index={index}
+														onkeydown={(e) => handleWhereChipKeyDown(e, index)}
+														ondblclick={() => startEditingWhereChip(index)}
+														onclick={() => {
+															focusedWhereChipIndex = index;
+														}}
+													>
+														{#if editingWhereChipIndex === index}
+															<input
+																type="text"
+																class="where-chip-edit-input w-20 border-none bg-transparent text-xs outline-none"
+																bind:value={editingWhereChipValue}
+																onblur={finishEditingWhereChip}
+																onkeydown={(e) => {
+																	if (e.key === 'Enter') {
+																		e.preventDefault();
+																		finishEditingWhereChip();
+																	} else if (e.key === 'Escape') {
+																		e.preventDefault();
+																		e.stopPropagation();
+																		cancelEditingWhereChip();
+																	}
+																}}
+															/>
+														{:else}
+															{column}
+														{/if}
 														<button
 															type="button"
 															class="hover:bg-muted ml-1 rounded-full"
@@ -1032,7 +1284,7 @@
 														>
 															<X class="h-3 w-3" />
 														</button>
-													</Badge>
+													</div>
 												{/each}
 												<!-- Input field -->
 												<input
@@ -1040,11 +1292,14 @@
 													placeholder={selectedWhereColumns.length === 0
 														? 'Where conditions...'
 														: ''}
-													class="placeholder:text-muted-foreground flex-1 bg-transparent outline-none"
+													class="where-input placeholder:text-muted-foreground flex-1 bg-transparent outline-none"
 													bind:value={whereInputValue}
 													oninput={(e) => handleWhereInputChange(e.currentTarget.value)}
 													onkeydown={handleWhereInputKeyDown}
-													onfocus={() => handleWhereInputChange(whereInputValue)}
+													onfocus={() => {
+														showWhereSuggestions = true;
+														focusedWhereChipIndex = -1;
+													}}
 												/>
 											</div>
 
@@ -1096,7 +1351,7 @@
 												type="text"
 												id="orderBy"
 												placeholder="Order By"
-												class="w-full"
+												class="w-full focus-visible:ring-0"
 												bind:value={orderBy}
 											/>
 										</div>
@@ -1106,7 +1361,7 @@
 												type="text"
 												id="groupBy"
 												placeholder="Group By"
-												class="w-full"
+												class="w-full focus-visible:ring-0"
 												bind:value={groupBy}
 											/>
 										</div>
@@ -1116,7 +1371,7 @@
 												type="text"
 												id="limit"
 												placeholder="Limit"
-												class="w-24"
+												class="w-24 focus-visible:ring-0"
 												bind:value={limit}
 											/>
 										</div>
@@ -1126,7 +1381,7 @@
 												type="text"
 												id="offset"
 												placeholder="Offset"
-												class="w-24"
+												class="w-24 focus-visible:ring-0"
 												bind:value={offset}
 											/>
 										</div>
