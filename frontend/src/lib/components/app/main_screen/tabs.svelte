@@ -84,7 +84,6 @@
 	let selectedWhereColumns = $state<string[]>([]);
 	let whereInputValue = $state('');
 	let showWhereSuggestions = $state(false);
-	let filteredWhereSuggestions = $state<string[]>([]);
 	let selectedWhereIndex = $state(-1);
 	let originalWhereInputValue = $state('');
 	let focusedWhereChipIndex = $state(-1);
@@ -132,6 +131,9 @@
 						$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
 						$activePoolID = tab.ActiveDBID || '';
 						$currentColor = tab.ActiveDBColor || '';
+					}
+					if (tab.TableColumnsList) {
+						filteredSuggestions = tab.TableColumnsList;
 					}
 
 					if (tab.rows && tab.columns) {
@@ -212,6 +214,10 @@
 				tabPostgresConnName = tab.PostgresConnName || '';
 				tabPostgresConnID = tab.PostgresConnID || 0;
 
+				if (tab.TableColumnsList) {
+					filteredSuggestions = tab.TableColumnsList;
+				}
+
 				select = tab.Select;
 				limit = tab.Limit;
 				offset = tab.Offset;
@@ -272,6 +278,9 @@
 					$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
 					$activePoolID = tab.ActiveDBID || '';
 					$currentColor = tab.ActiveDBColor || '';
+					if (tab.TableColumnsList) {
+						filteredSuggestions = tab.TableColumnsList;
+					}
 
 					if (tab.rows && tab.columns) {
 						// Update columns
@@ -344,6 +353,9 @@
 					$selectedDBDisplay = tab.ActiveDB || 'Connect to a database';
 					$activePoolID = tab.ActiveDBID || '';
 					$currentColor = tab.ActiveDBColor || '';
+				}
+				if (tab.TableColumnsList) {
+					filteredSuggestions = tab.TableColumnsList;
 				}
 
 				if (tab.rows && tab.columns) {
@@ -476,6 +488,9 @@
 	}
 
 	function getTableData() {
+		showSuggestions = false;
+		showWhereSuggestions = false;
+
 		if (tabTableDBPoolID == '') {
 			toast.error('Please select a database to execute the query', {
 				action: {
@@ -487,6 +502,7 @@
 		}
 
 		queryLoading = true;
+
 		// Execute query
 		GetTableData(tabTableDBPoolID, tabID, tabName, select, limit, offset, where, orderBy, groupBy)
 			.then((result) => {
@@ -579,9 +595,6 @@
 		selectedIndex = -1; // Reset selection when typing
 		showSuggestions = true;
 		showWhereSuggestions = false;
-		filteredSuggestions = Array.from($suggestions).filter(
-			(s) => s.toLowerCase().includes(value.toLowerCase()) && !selectedColumns.includes(s)
-		);
 	}
 
 	function selectColumn(column: string) {
@@ -650,6 +663,7 @@
 				selectColumn(inputValue.trim());
 			}
 		} else if (event.key === 'Escape') {
+			event.preventDefault();
 			showSuggestions = false;
 			selectedIndex = -1;
 			// Restore original input value
@@ -754,9 +768,6 @@
 		selectedWhereIndex = -1;
 		showWhereSuggestions = true;
 		showSuggestions = false;
-		filteredWhereSuggestions = Array.from($suggestions).filter(
-			(s) => s.toLowerCase().includes(value.toLowerCase()) && !selectedWhereColumns.includes(s)
-		);
 	}
 
 	function selectWhereColumn(column: string) {
@@ -765,7 +776,7 @@
 			updateWhereValue();
 		}
 		whereInputValue = '';
-		showWhereSuggestions = false;
+		showWhereSuggestions = true;
 		selectedWhereIndex = -1;
 	}
 
@@ -775,7 +786,7 @@
 	}
 
 	function updateWhereValue() {
-		where = selectedWhereColumns.join(' AND ');
+		where = selectedWhereColumns.join(' ');
 	}
 
 	function handleWhereInputKeyDown(event: KeyboardEvent) {
@@ -790,18 +801,18 @@
 
 		if (event.key === 'ArrowDown') {
 			event.preventDefault();
-			if (filteredWhereSuggestions.length > 0) {
+			if (filteredSuggestions.length > 0) {
 				if (selectedWhereIndex === -1) {
 					originalWhereInputValue = whereInputValue;
 				}
-				selectedWhereIndex = Math.min(selectedWhereIndex + 1, filteredWhereSuggestions.length - 1);
-				whereInputValue = filteredWhereSuggestions[selectedWhereIndex];
+				selectedWhereIndex = Math.min(selectedWhereIndex + 1, filteredSuggestions.length - 1);
+				whereInputValue = filteredSuggestions[selectedWhereIndex];
 				showWhereSuggestions = true;
 				scrollToSelectedWhereItem();
 			}
 		} else if (event.key === 'ArrowUp') {
 			event.preventDefault();
-			if (filteredWhereSuggestions.length > 0) {
+			if (filteredSuggestions.length > 0) {
 				if (selectedWhereIndex === -1) {
 					originalWhereInputValue = whereInputValue;
 				}
@@ -809,18 +820,19 @@
 				if (selectedWhereIndex === -1) {
 					whereInputValue = originalWhereInputValue;
 				} else {
-					whereInputValue = filteredWhereSuggestions[selectedWhereIndex];
+					whereInputValue = filteredSuggestions[selectedWhereIndex];
 				}
 				scrollToSelectedWhereItem();
 			}
 		} else if (event.key === 'Enter') {
 			event.preventDefault();
-			if (selectedWhereIndex >= 0 && filteredWhereSuggestions[selectedWhereIndex]) {
-				selectWhereColumn(filteredWhereSuggestions[selectedWhereIndex]);
+			if (selectedWhereIndex >= 0 && filteredSuggestions[selectedWhereIndex]) {
+				selectWhereColumn(filteredSuggestions[selectedWhereIndex]);
 			} else if (whereInputValue.trim()) {
 				selectWhereColumn(whereInputValue.trim());
 			}
 		} else if (event.key === 'Escape') {
+			event.preventDefault();
 			showWhereSuggestions = false;
 			selectedWhereIndex = -1;
 			whereInputValue = originalWhereInputValue;
@@ -942,7 +954,7 @@
 	$effect(() => {
 		if (where && where.trim()) {
 			selectedWhereColumns = where
-				.split(' AND ')
+				.split(' ')
 				.map((s) => s.trim())
 				.filter((s) => s);
 		} else {
@@ -1114,6 +1126,7 @@
 													) as HTMLInputElement;
 													input?.focus();
 													showSuggestions = true;
+													showWhereSuggestions = false;
 												}}
 											>
 												<!-- Selected chips -->
@@ -1236,6 +1249,7 @@
 													) as HTMLInputElement;
 													input?.focus();
 													showWhereSuggestions = true;
+													showSuggestions = false;
 												}}
 											>
 												<!-- Selected chips -->
@@ -1304,14 +1318,14 @@
 											</div>
 
 											<!-- Suggestions dropdown -->
-											{#if showWhereSuggestions && (filteredWhereSuggestions.length > 0 || whereInputValue.trim())}
+											{#if showWhereSuggestions && (filteredSuggestions.length > 0 || whereInputValue.trim())}
 												<div
 													id="where-suggestions-list"
 													class="bg-popover absolute left-0 right-0 top-full z-50 mt-1 rounded-md border p-0 shadow-md"
 												>
-													{#if filteredWhereSuggestions.length > 0}
+													{#if filteredSuggestions.length > 0}
 														<div class="max-h-60 overflow-auto">
-															{#each filteredWhereSuggestions as suggestion, index}
+															{#each filteredSuggestions as suggestion, index}
 																<button
 																	type="button"
 																	class="hover:bg-muted w-full px-3 py-2 text-left text-sm {selectedWhereIndex ===

@@ -31,6 +31,10 @@ type Tab struct {
 	Where            string
 	OrderBy          string
 	GroupBy          string
+	TableColumns     string
+
+	// To be passed to frontend
+	TableColumnsList []string
 }
 
 var validTypes = map[string]struct{}{

@@ -9,7 +9,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 
-	c "dbmx/app"
+	a "dbmx/app"
 	"dbmx/config/database"
 )
 
@@ -22,9 +22,11 @@ var icon []byte
 func main() {
 	// Create an instance of the app structure
 	db := database.NewSqlite3DB().DB
-	conn := c.NewConnections(db)
+	pm := a.NewPoolManager()
+
+	conn := a.NewConnections(db, pm)
+	tabs := a.NewTabs(db, pm)
 	app := NewApp(conn)
-	tabs := c.NewTabs(db)
 
 	// Create application with options
 	err := wails.Run(&options.App{

@@ -22,10 +22,10 @@ type Connections struct {
 	PM *PoolManager
 }
 
-func NewConnections(db *sql.DB) *Connections {
+func NewConnections(db *sql.DB, pm *PoolManager) *Connections {
 	return &Connections{
 		DB: db,
-		PM: NewPoolManager(),
+		PM: pm,
 	}
 }
 
