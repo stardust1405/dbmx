@@ -163,6 +163,8 @@ export namespace model {
 	    Where: string;
 	    OrderBy: string;
 	    GroupBy: string;
+	    TableColumns: string;
+	    TableColumnsList: string[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Tab(source);
@@ -190,6 +192,8 @@ export namespace model {
 	        this.Where = source["Where"];
 	        this.OrderBy = source["OrderBy"];
 	        this.GroupBy = source["GroupBy"];
+	        this.TableColumns = source["TableColumns"];
+	        this.TableColumnsList = source["TableColumnsList"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
