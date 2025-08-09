@@ -79,6 +79,7 @@
 	let focusedChipIndex = $state(-1); // For chip navigation
 	let editingChipIndex = $state(-1); // For chip editing
 	let editingChipValue = $state(''); // Value being edited
+	let insertAtBeginning = $state(false); // Flag to insert chips at the beginning
 
 	// Multi-select input state for WHERE
 	let selectedWhereColumns = $state<string[]>([]);
@@ -89,6 +90,7 @@
 	let focusedWhereChipIndex = $state(-1);
 	let editingWhereChipIndex = $state(-1);
 	let editingWhereChipValue = $state('');
+	let insertWhereAtBeginning = $state(false); // Flag to insert WHERE chips at the beginning
 
 	onMount(() => {
 		getAllTabs();
@@ -595,16 +597,42 @@
 		selectedIndex = -1; // Reset selection when typing
 		showSuggestions = true;
 		showWhereSuggestions = false;
+
+		// Filter suggestions based on input value
+		const currentTab = tabsMap.get(tabID);
+		if (value.trim()) {
+			// Show filtered suggestions when typing
+			filteredSuggestions = (currentTab?.TableColumnsList || []).filter(
+				(column: string) =>
+					column.toLowerCase().includes(value.toLowerCase()) && !selectedColumns.includes(column)
+			);
+		} else {
+			// Show all available columns when input is empty
+			filteredSuggestions = (currentTab?.TableColumnsList || []).filter(
+				(column: string) => !selectedColumns.includes(column)
+			);
+		}
 	}
 
 	function selectColumn(column: string) {
 		if (!selectedColumns.includes(column)) {
-			selectedColumns = [...selectedColumns, column];
+			if (insertAtBeginning) {
+				selectedColumns = [column, ...selectedColumns];
+				insertAtBeginning = false; // Reset flag after use
+			} else {
+				selectedColumns = [...selectedColumns, column];
+			}
 			updateSelectValue();
 		}
 		inputValue = '';
 		showSuggestions = true;
 		selectedIndex = -1;
+
+		// Reset to show all available columns after selection
+		const currentTab = tabsMap.get(tabID);
+		filteredSuggestions = (currentTab?.TableColumnsList || []).filter(
+			(column: string) => !selectedColumns.includes(column)
+		);
 	}
 
 	function removeColumn(column: string) {
@@ -684,7 +712,21 @@
 
 		if (event.key === 'ArrowLeft') {
 			event.preventDefault();
-			focusedChipIndex = Math.max(0, chipIndex - 1);
+			if (chipIndex > 0) {
+				focusedChipIndex = chipIndex - 1;
+			} else {
+				// Move focus back to input when going left from first chip
+				focusedChipIndex = -1;
+				// Set flag to insert next chip at the beginning
+				insertAtBeginning = true;
+				// Clear any existing input value and focus at the beginning
+				inputValue = '';
+				setTimeout(() => {
+					const input = document.querySelector('.select-input') as HTMLInputElement;
+					input?.focus();
+					input?.setSelectionRange(0, 0);
+				}, 0);
+			}
 		} else if (event.key === 'ArrowRight') {
 			event.preventDefault();
 			if (chipIndex < selectedColumns.length - 1) {
@@ -768,16 +810,43 @@
 		selectedWhereIndex = -1;
 		showWhereSuggestions = true;
 		showSuggestions = false;
+
+		// Filter suggestions based on input value
+		const currentTab = tabsMap.get(tabID);
+		if (value.trim()) {
+			// Show filtered suggestions when typing
+			filteredSuggestions = (currentTab?.TableColumnsList || []).filter(
+				(column: string) =>
+					column.toLowerCase().includes(value.toLowerCase()) &&
+					!selectedWhereColumns.includes(column)
+			);
+		} else {
+			// Show all available columns when input is empty
+			filteredSuggestions = (currentTab?.TableColumnsList || []).filter(
+				(column: string) => !selectedWhereColumns.includes(column)
+			);
+		}
 	}
 
 	function selectWhereColumn(column: string) {
 		if (!selectedWhereColumns.includes(column)) {
-			selectedWhereColumns = [...selectedWhereColumns, column];
+			if (insertWhereAtBeginning) {
+				selectedWhereColumns = [column, ...selectedWhereColumns];
+				insertWhereAtBeginning = false; // Reset flag after use
+			} else {
+				selectedWhereColumns = [...selectedWhereColumns, column];
+			}
 			updateWhereValue();
 		}
 		whereInputValue = '';
 		showWhereSuggestions = true;
 		selectedWhereIndex = -1;
+
+		// Reset to show all available columns after selection
+		const currentTab = tabsMap.get(tabID);
+		filteredSuggestions = (currentTab?.TableColumnsList || []).filter(
+			(column: string) => !selectedWhereColumns.includes(column)
+		);
 	}
 
 	function removeWhereColumn(column: string) {
@@ -851,7 +920,21 @@
 
 		if (event.key === 'ArrowLeft') {
 			event.preventDefault();
-			focusedWhereChipIndex = Math.max(0, chipIndex - 1);
+			if (chipIndex > 0) {
+				focusedWhereChipIndex = chipIndex - 1;
+			} else {
+				// Move focus back to input when going left from first chip
+				focusedWhereChipIndex = -1;
+				// Set flag to insert next chip at the beginning
+				insertWhereAtBeginning = true;
+				// Clear any existing input value and focus at the beginning
+				whereInputValue = '';
+				setTimeout(() => {
+					const input = document.querySelector('.where-input') as HTMLInputElement;
+					input?.focus();
+					input?.setSelectionRange(0, 0);
+				}, 0);
+			}
 		} else if (event.key === 'ArrowRight') {
 			event.preventDefault();
 			if (chipIndex < selectedWhereColumns.length - 1) {
@@ -1188,6 +1271,13 @@
 													onfocus={() => {
 														showSuggestions = true;
 														focusedChipIndex = -1;
+														// Initialize filtered suggestions when input gets focus
+														if (filteredSuggestions.length === 0) {
+															const currentTab = tabsMap.get(tabID);
+															filteredSuggestions = (currentTab?.TableColumnsList || []).filter(
+																(column: string) => !selectedColumns.includes(column)
+															);
+														}
 													}}
 												/>
 											</div>
