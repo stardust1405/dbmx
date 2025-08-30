@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"log"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/logger"
@@ -21,15 +23,20 @@ var icon []byte
 
 func main() {
 	// Create an instance of the app structure
-	db := database.NewSqlite3DB().DB
+	db, err := database.NewSqlite3DB(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.CloseConn()
+
 	pm := a.NewPoolManager()
 
-	conn := a.NewConnections(db, pm)
-	tabs := a.NewTabs(db, pm)
+	conn := a.NewConnections(db.DB, pm)
+	tabs := a.NewTabs(db.DB, pm)
 	app := NewApp(conn)
 
 	// Create application with options
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:  "dbmx",
 		Width:  1024,
 		Height: 768,
@@ -76,6 +83,7 @@ func main() {
 	})
 
 	if err != nil {
-		println("Error:", err.Error())
+		log.Fatal(err)
 	}
+
 }

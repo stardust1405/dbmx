@@ -1080,7 +1080,7 @@
 	});
 
 	// Call UpdateTabEditorContent on editor change
-	let editorUpdateTimer: number | undefined;
+	let editorUpdateTimer: any;
 	$effect(() => {
 		// Explicitly reference editor to ensure reactivity
 		const _ = editor;

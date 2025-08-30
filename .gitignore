@@ -4,3 +4,6 @@ frontend/build
 frontend/.svelte-kit
 app.db
 go.sum
+# built at compile time
+config/database/app.db
+config/database/app.dev.db

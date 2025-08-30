@@ -10,5 +10,11 @@
     "name": "Karan Singhasane",
     "email": "ksinghasane14@gmail.com"
   },
-  "wailsjsdir": "./frontend/src/lib"
+  "wailsjsdir": "./frontend/src/lib",
+  "preBuildHooks": {
+    "darwin/*": "bash -lc 'cd ../../ && bash ./scripts/build_db.sh'",
+    "linux/*": "bash -lc 'cd ../../ && bash ./scripts/build_db.sh'",
+    "windows/*": "pwsh -NoProfile -ExecutionPolicy Bypass -Command \"Set-Location ..\\..; ./scripts/build_db.ps1\""
+  },
+  "tags": "production"
 }
