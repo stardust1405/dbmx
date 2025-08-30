@@ -40,6 +40,7 @@
 
 	import DataTable from './data-table.svelte';
 	import { columns, rows } from '$lib/state.svelte';
+	import TableStructure from './table_structure.svelte';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
@@ -1519,7 +1520,7 @@
 							</div>
 						{:else if tableViewTab === 'structure'}
 							<div class="mt-2 flex flex-1 flex-col px-2">
-								<p>Structure here</p>
+								<TableStructure />
 							</div>
 						{:else if tableViewTab === 'indexes'}
 							<div class="mt-1 flex flex-1 flex-col px-2">
