@@ -13,6 +13,7 @@
 	import { Input } from '$lib/components/ui/input/index.js';
 	import * as Popover from '$lib/components/ui/popover/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
+	import { LineScale } from 'svelte-spins';
 
 	import * as Select from '$lib/components/ui/select/index.js';
 
@@ -46,6 +47,7 @@
 	let outputHeight = $state(50); // Percentage of the container height
 
 	let queryLoading = $state(false);
+	let tabLoading = $state(false);
 
 	// Handle Tabs
 
@@ -150,6 +152,7 @@
 		tableDBPoolID: string = '',
 		postgresConnName: string = ''
 	) {
+		tabLoading = true;
 		let tableType = 'editor';
 		let tabDisplayName = 'Editor';
 
@@ -199,6 +202,8 @@
 				groupBy = tab.GroupBy;
 
 				editor = tab.Editor;
+
+				tabLoading = false;
 			})
 			.catch((error) => {
 				toast.error('Failed to add tab', {
@@ -611,6 +616,9 @@
 						</button>
 					</div>
 				{/each}
+				{#if tabLoading}
+					<LineScale color="lightgreen" style="transform: scale(0.5);" />
+				{/if}
 				<button
 					class="ml-2 flex items-center gap-1 text-blue-500 hover:text-blue-700"
 					onclick={() => addTab()}
