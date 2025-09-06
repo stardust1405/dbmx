@@ -719,3 +719,284 @@ func (c *Connections) UpdateTabOutput(tabID int64, output *model.Output) {
 		fmt.Println(err)
 	}
 }
+
+func (c *Connections) GetTableInfo(activePoolID uuid.UUID, tableName string) (*model.TableInfo, error) {
+	pool, exists := c.PM.GetPool(activePoolID)
+	if !exists {
+		return nil, errors.New("pool doesn't exist")
+	}
+
+	ctx := context.Background()
+
+	// Get table structure
+	query := `
+		WITH fk_info AS (
+			SELECT
+				kcu.table_schema,
+				kcu.table_name,
+				kcu.column_name,
+				string_agg(ccu.table_name || '.' || ccu.column_name, ', ') AS foreign_keys
+			FROM information_schema.table_constraints tc
+			JOIN information_schema.key_column_usage kcu
+				ON tc.constraint_name = kcu.constraint_name
+			AND tc.table_schema = kcu.table_schema
+			JOIN information_schema.constraint_column_usage ccu
+				ON ccu.constraint_name = tc.constraint_name
+			AND ccu.table_schema = tc.table_schema
+			WHERE tc.constraint_type = 'FOREIGN KEY'
+			GROUP BY kcu.table_schema, kcu.table_name, kcu.column_name
+		),
+		check_info AS (
+			SELECT
+				tc.table_schema,
+				tc.table_name,
+				kcu.column_name,
+				string_agg(cc.check_clause, ' AND ') AS check_clauses
+			FROM information_schema.table_constraints tc
+			JOIN information_schema.constraint_column_usage kcu
+				ON tc.constraint_name = kcu.constraint_name
+			AND tc.table_schema = kcu.table_schema
+			JOIN information_schema.check_constraints cc
+				ON tc.constraint_name = cc.constraint_name
+			WHERE tc.constraint_type = 'CHECK'
+			GROUP BY tc.table_schema, tc.table_name, kcu.column_name
+		)
+		SELECT 
+			c.column_name,
+			CASE 
+				WHEN c.character_maximum_length IS NOT NULL 
+					THEN c.data_type || '(' || c.character_maximum_length || ')'
+				ELSE c.data_type
+			END AS data_type,
+			c.is_nullable,
+			c.column_default,
+			ch.check_clauses,
+			fk.foreign_keys,
+			pgd.description AS column_comment
+		FROM information_schema.columns c
+		LEFT JOIN check_info ch
+			ON c.table_schema = ch.table_schema
+		AND c.table_name = ch.table_name
+		AND c.column_name = ch.column_name
+		LEFT JOIN fk_info fk
+			ON c.table_schema = fk.table_schema
+		AND c.table_name = fk.table_name
+		AND c.column_name = fk.column_name
+		LEFT JOIN pg_catalog.pg_statio_all_tables st
+			ON c.table_schema = st.schemaname
+		AND c.table_name = st.relname
+		LEFT JOIN pg_catalog.pg_description pgd
+			ON pgd.objoid = st.relid
+		AND pgd.objsubid = c.ordinal_position
+		WHERE c.table_name = $1
+		AND c.table_schema = 'public'
+		ORDER BY c.ordinal_position;
+	`
+	resultRows, err := pool.Query(ctx, query, tableName)
+	if err != nil {
+		return nil, err
+	}
+	defer resultRows.Close()
+
+	var structure model.Structure
+
+	fieldDescriptions := resultRows.FieldDescriptions()
+	columns := make([]string, len(fieldDescriptions))
+	for i, column := range fieldDescriptions {
+		columns[i] = string(column.Name)
+	}
+	structure.Columns = columns
+
+	var rows [][]model.Cell
+
+	for resultRows.Next() {
+		row, err := resultRows.Values()
+		if err != nil {
+			return nil, err
+		}
+
+		cells := []model.Cell{}
+		for i, cell := range row {
+			newCell := model.Cell{
+				Column: columns[i],
+			}
+			switch v := cell.(type) {
+			case []byte:
+				newCell.Value = string(v)
+			case time.Time:
+				newCell.Value = v.Format(time.RFC3339)
+			case nil:
+				newCell.Value = "NULL"
+			case string:
+				if v == "" {
+					newCell.Value = "EMPTY"
+				}
+				newCell.Value = v
+			default:
+				newCell.Value = fmt.Sprintf("%v", v)
+			}
+			cells = append(cells, newCell)
+		}
+		rows = append(rows, cells)
+	}
+
+	if err := resultRows.Err(); err != nil {
+		return nil, err
+	}
+
+	structure.Rows = rows
+
+	// Get table indexes
+	query = `
+		SELECT
+			i.relname                                  AS index_name,
+			am.amname                                  AS index_algorithm,      -- btree/gin/gist/brin/hash
+			idx.indisunique                            AS is_unique,
+			idx.indisprimary                           AS is_primary,
+			-- key columns (handles expressions too) – first (...) in the index def
+			substring(pg_get_indexdef(idx.indexrelid) from '\(([^)]+)\)') AS columns,
+			-- partial index predicate (NULL if not partial)
+			pg_get_expr(idx.indpred, idx.indrelid)     AS condition,
+			-- included (non-key) columns, if present (v11+); otherwise NULL
+			substring(pg_get_indexdef(idx.indexrelid) from 'INCLUDE \(([^)]*)\)') AS include,
+			obj_description(i.oid, 'pg_class')         AS comment
+		FROM pg_class t
+		JOIN pg_index idx ON t.oid = idx.indrelid
+		JOIN pg_class i   ON i.oid = idx.indexrelid
+		JOIN pg_am am     ON i.relam = am.oid
+		WHERE t.relname = $1
+		AND t.relnamespace = 'public'::regnamespace  -- adjust schema if needed
+		ORDER BY i.relname DESC;
+	`
+	resultRows, err = pool.Query(ctx, query, tableName)
+	if err != nil {
+		return nil, err
+	}
+	defer resultRows.Close()
+
+	var indexes model.Indexes
+
+	fieldDescriptions = resultRows.FieldDescriptions()
+	columns = make([]string, len(fieldDescriptions))
+	for i, column := range fieldDescriptions {
+		columns[i] = string(column.Name)
+	}
+	indexes.Columns = columns
+
+	var indexRows [][]model.Cell
+
+	for resultRows.Next() {
+		row, err := resultRows.Values()
+		if err != nil {
+			return nil, err
+		}
+
+		cells := []model.Cell{}
+		for i, cell := range row {
+			newCell := model.Cell{
+				Column: columns[i],
+			}
+			switch v := cell.(type) {
+			case []byte:
+				newCell.Value = string(v)
+			case time.Time:
+				newCell.Value = v.Format(time.RFC3339)
+			case nil:
+				newCell.Value = "NULL"
+			case string:
+				if v == "" {
+					newCell.Value = "EMPTY"
+				}
+				newCell.Value = v
+			default:
+				newCell.Value = fmt.Sprintf("%v", v)
+			}
+			cells = append(cells, newCell)
+		}
+		indexRows = append(indexRows, cells)
+	}
+
+	if err := resultRows.Err(); err != nil {
+		return nil, err
+	}
+
+	indexes.Rows = indexRows
+
+	// Get table rules
+	query = `
+		SELECT
+			con.conname        AS constraint_name,
+			CASE con.contype
+				WHEN 'p' THEN 'PRIMARY KEY'
+				WHEN 'u' THEN 'UNIQUE'
+				WHEN 'f' THEN 'FOREIGN KEY'
+				WHEN 'c' THEN 'CHECK'
+				WHEN 'x' THEN 'EXCLUSION'
+				ELSE con.contype::text
+			END                AS constraint_type,
+			pg_get_constraintdef(con.oid) AS definition,
+			con.convalidated   AS is_validated,
+			obj_description(con.oid, 'pg_constraint') AS comment
+		FROM pg_constraint con
+		JOIN pg_class rel   ON rel.oid = con.conrelid
+		JOIN pg_namespace n ON n.oid = rel.relnamespace
+		WHERE rel.relname = $1
+		AND n.nspname = 'public'   -- adjust schema if needed
+		ORDER BY con.contype ASC;
+	`
+	resultRows, err = pool.Query(ctx, query, tableName)
+	if err != nil {
+		return nil, err
+	}
+	defer resultRows.Close()
+
+	var rules model.Rules
+
+	fieldDescriptions = resultRows.FieldDescriptions()
+	columns = make([]string, len(fieldDescriptions))
+	for i, column := range fieldDescriptions {
+		columns[i] = string(column.Name)
+	}
+	rules.Columns = columns
+
+	var ruleRows [][]model.Cell
+
+	for resultRows.Next() {
+		row, err := resultRows.Values()
+		if err != nil {
+			return nil, err
+		}
+
+		cells := []model.Cell{}
+		for i, cell := range row {
+			newCell := model.Cell{
+				Column: columns[i],
+			}
+			switch v := cell.(type) {
+			case []byte:
+				newCell.Value = string(v)
+			case time.Time:
+				newCell.Value = v.Format(time.RFC3339)
+			case nil:
+				newCell.Value = "NULL"
+			case string:
+				if v == "" {
+					newCell.Value = "EMPTY"
+				}
+				newCell.Value = v
+			default:
+				newCell.Value = fmt.Sprintf("%v", v)
+			}
+			cells = append(cells, newCell)
+		}
+		ruleRows = append(ruleRows, cells)
+	}
+
+	if err := resultRows.Err(); err != nil {
+		return nil, err
+	}
+
+	rules.Rows = ruleRows
+
+	return &model.TableInfo{Structure: structure, Indexes: indexes, Rules: rules}, nil
+}

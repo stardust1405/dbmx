@@ -9,7 +9,6 @@
 		type ColumnDef,
 		type ColumnFiltersState,
 		type PaginationState,
-		type RowData,
 		type RowSelectionState,
 		type SortingState,
 		type VisibilityState
@@ -29,11 +28,9 @@
 	type DataTableProps<TData, TValue> = {
 		columns: ColumnDef<TData, TValue>[];
 		data: TData[];
-		queryLoading: boolean;
-		query: string;
 	};
 
-	let { data, columns, queryLoading, query }: DataTableProps<TData, TValue> = $props();
+	let { data, columns }: DataTableProps<TData, TValue> = $props();
 
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
 	let sorting = $state<SortingState>([]);
@@ -106,8 +103,6 @@
 			}
 		}
 	});
-
-	queryLoading = false;
 </script>
 
 <div class="h-full overflow-auto">
