@@ -42,6 +42,10 @@ export function GetTableData(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg
   return window['go']['app']['Connections']['GetTableData'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 }
 
+export function GetTableInfo(arg1, arg2) {
+  return window['go']['app']['Connections']['GetTableInfo'](arg1, arg2);
+}
+
 export function RefreshPostgresDatabase(arg1, arg2, arg3, arg4) {
   return window['go']['app']['Connections']['RefreshPostgresDatabase'](arg1, arg2, arg3, arg4);
 }

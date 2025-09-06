@@ -11,8 +11,6 @@
 	import * as Breadcrumb from '$lib/components/ui/breadcrumb/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import * as Popover from '$lib/components/ui/popover/index.js';
-	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { LineScale } from 'svelte-spins';
 
 	import * as Select from '$lib/components/ui/select/index.js';
@@ -41,7 +39,7 @@
 
 	import DataTable from './data-table.svelte';
 	import { columns, rows } from '$lib/state.svelte';
-	import TableStructure from './table_structure.svelte';
+	import ManageTable from './manage_table.svelte';
 
 	let editorHeight = $state(50); // Percentage of the container height
 	let outputHeight = $state(50); // Percentage of the container height
@@ -77,6 +75,8 @@
 	});
 
 	function getAllTabs() {
+		tableViewTab = 'data';
+
 		GetAllTabs().then((tabs) => {
 			if (!tabs) {
 				return;
@@ -155,6 +155,8 @@
 		tableDBPoolID: string = '',
 		postgresConnName: string = ''
 	) {
+		tableViewTab = 'data';
+
 		tabLoading = true;
 		let tableType = 'editor';
 		let tabDisplayName = 'Editor';
@@ -229,6 +231,8 @@
 	function deleteTab(id: number) {
 		// Delete the old tab from the map
 		tabsMap.delete(id);
+		tableViewTab = 'data';
+
 		DeleteTab(id)
 			.then((tab) => {
 				if (tab) {
@@ -302,6 +306,8 @@
 	}
 
 	function setActiveTab(id: number) {
+		tableViewTab = 'data';
+
 		SetActiveTab(id)
 			.then((tab) => {
 				queryLoading = false;
@@ -683,11 +689,8 @@
 										<Tabs.Trigger value="data" onclick={() => (tableViewTab = 'data')}
 											>Data</Tabs.Trigger
 										>
-										<Tabs.Trigger value="structure" onclick={() => (tableViewTab = 'structure')}
-											>Structure</Tabs.Trigger
-										>
-										<Tabs.Trigger value="indexes" onclick={() => (tableViewTab = 'indexes')}
-											>Indexes</Tabs.Trigger
+										<Tabs.Trigger value="manage" onclick={() => (tableViewTab = 'manage')}
+											>Manage</Tabs.Trigger
 										>
 									</Tabs.List>
 								</Tabs.Root>
@@ -764,12 +767,7 @@
 								<div class="flex flex-1 overflow-auto rounded-md border">
 									<div class="h-full w-full overflow-auto">
 										{#if $columns.length > 0}
-											<DataTable
-												data={$rows}
-												columns={$columns}
-												{queryLoading}
-												query={$selectedQuery}
-											/>
+											<DataTable data={$rows} columns={$columns} />
 										{:else if queryLoading}
 											<Skeleton class="my-3 h-[40px] w-full" />
 											<Skeleton class="my-3 h-[40px] w-full" />
@@ -787,13 +785,9 @@
 									</div>
 								</div>
 							</div>
-						{:else if tableViewTab === 'structure'}
-							<div class="mt-2 flex flex-1 flex-col px-2">
-								<TableStructure />
-							</div>
-						{:else if tableViewTab === 'indexes'}
-							<div class="mt-1 flex flex-1 flex-col px-2">
-								<p>Indexes here</p>
+						{:else if tableViewTab === 'manage'}
+							<div class="mt-2 flex flex-1 flex-col overflow-hidden">
+								<ManageTable activePoolID={$activePoolID} {tabName} />
 							</div>
 						{/if}
 					</div>
@@ -861,12 +855,7 @@
 								>
 									<div class="h-full">
 										{#if $columns.length > 0}
-											<DataTable
-												data={$rows}
-												columns={$columns}
-												{queryLoading}
-												query={$selectedQuery}
-											/>
+											<DataTable data={$rows} columns={$columns} />
 										{:else if queryLoading}
 											<Skeleton class="my-3 h-[40px] w-full" />
 											<Skeleton class="my-3 h-[40px] w-full" />

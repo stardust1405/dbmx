@@ -51,3 +51,24 @@ type Output struct {
 	Columns []string `json:"columns"`
 	Rows    [][]Cell `json:"rows"`
 }
+
+type Structure struct {
+	Columns []string `json:"columns"`
+	Rows    [][]Cell `json:"rows"`
+}
+
+type Indexes struct {
+	Columns []string `json:"columns"`
+	Rows    [][]Cell `json:"rows"`
+}
+
+type Rules struct {
+	Columns []string `json:"columns"`
+	Rows    [][]Cell `json:"rows"`
+}
+
+type TableInfo struct {
+	Structure Structure `json:"structure"`
+	Indexes   Indexes   `json:"indexes"`
+	Rules     Rules     `json:"rules"`
+}

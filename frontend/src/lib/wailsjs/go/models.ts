@@ -42,6 +42,38 @@ export namespace model {
 	        this.Columns = source["Columns"];
 	    }
 	}
+	export class Indexes {
+	    columns: string[];
+	    rows: Cell[][];
+	
+	    static createFrom(source: any = {}) {
+	        return new Indexes(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.columns = source["columns"];
+	        this.rows = this.convertValues(source["rows"], Cell);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Output {
 	    columns: string[];
 	    rows: Cell[][];
@@ -142,6 +174,70 @@ export namespace model {
 		    return a;
 		}
 	}
+	export class Rules {
+	    columns: string[];
+	    rows: Cell[][];
+	
+	    static createFrom(source: any = {}) {
+	        return new Rules(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.columns = source["columns"];
+	        this.rows = this.convertValues(source["rows"], Cell);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class Structure {
+	    columns: string[];
+	    rows: Cell[][];
+	
+	    static createFrom(source: any = {}) {
+	        return new Structure(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.columns = source["columns"];
+	        this.rows = this.convertValues(source["rows"], Cell);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Tab {
 	    ID: number;
 	    Name: string;
@@ -194,6 +290,40 @@ export namespace model {
 	        this.GroupBy = source["GroupBy"];
 	        this.TableColumns = source["TableColumns"];
 	        this.TableColumnsList = source["TableColumnsList"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TableInfo {
+	    structure: Structure;
+	    indexes: Indexes;
+	    rules: Rules;
+	
+	    static createFrom(source: any = {}) {
+	        return new TableInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.structure = this.convertValues(source["structure"], Structure);
+	        this.indexes = this.convertValues(source["indexes"], Indexes);
+	        this.rules = this.convertValues(source["rules"], Rules);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

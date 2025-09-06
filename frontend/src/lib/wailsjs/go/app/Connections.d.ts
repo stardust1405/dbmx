@@ -23,6 +23,8 @@ export function GetSqlite3Version():Promise<string>;
 
 export function GetTableData(arg1:uuid.UUID,arg2:number,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:string):Promise<model.QueryResult>;
 
+export function GetTableInfo(arg1:uuid.UUID,arg2:string):Promise<model.TableInfo>;
+
 export function RefreshPostgresDatabase(arg1:number,arg2:string,arg3:string,arg4:string):Promise<model.Database>;
 
 export function TerminateAllDatabaseConnections():Promise<void>;
