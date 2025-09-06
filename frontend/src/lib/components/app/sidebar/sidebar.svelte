@@ -65,7 +65,7 @@
 			.catch((error) => {
 				// Handle errors from the EstablishPostgresDatabaseConnection call
 				toast.error('Connection Failed', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
@@ -103,8 +103,13 @@
 
 				$activeDBs.push(db);
 				// Add tables and columns to suggestions set
-				db.Tables.forEach((table) => $suggestions.add(table));
-				db.Columns.forEach((column) => $suggestions.add(column));
+
+				if (db.Tables) {
+					db.Tables.forEach((table) => $suggestions.add(table));
+				}
+				if (db.Columns) {
+					db.Columns.forEach((column) => $suggestions.add(column));
+				}
 
 				// If the server and database to which connection was established is the current table's database
 				// Set the tab table db pool id so that it's connected
@@ -123,7 +128,7 @@
 				dbLoadingMap.set(dbID, false);
 
 				toast.error('Connection Failed', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
@@ -148,8 +153,12 @@
 					if (db.IsActive) {
 						$activeDBs.push(db);
 						// Add tables and columns to suggestions set
-						db.Tables.forEach((table) => $suggestions.add(table));
-						db.Columns.forEach((column) => $suggestions.add(column));
+						if (db.Tables) {
+							db.Tables.forEach((table) => $suggestions.add(table));
+						}
+						if (db.Columns) {
+							db.Columns.forEach((column) => $suggestions.add(column));
+						}
 
 						// If the server and database to which connection was established is the current table's database
 						// Set the tab table db pool id so that it's connected
@@ -176,7 +185,7 @@
 				loadingMap.set(id, false);
 				// Handle errors from the EstablishPostgresDatabaseConnection call
 				toast.error('Connection Failed', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
@@ -231,8 +240,12 @@
 						1
 					); // Use splice to remove the item
 					// Remove tables and columns from suggestions set
-					db.Tables.forEach((table) => $suggestions.delete(table));
-					db.Columns.forEach((column) => $suggestions.delete(column));
+					if (db.Tables) {
+						db.Tables.forEach((table) => $suggestions.delete(table));
+					}
+					if (db.Columns) {
+						db.Columns.forEach((column) => $suggestions.delete(column));
+					}
 					db.IsActive = false;
 					db.Tables = [];
 					db.Columns = [];
@@ -262,7 +275,7 @@
 			})
 			.catch((error) => {
 				toast.error('Failed to disconnect', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
@@ -290,7 +303,7 @@
 				dbLoadingMap.set(dbID, false);
 
 				toast.error('Failed to refresh', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')

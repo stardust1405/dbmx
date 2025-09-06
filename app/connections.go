@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/jackc/pgx/v5"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -507,7 +508,13 @@ func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, tabID i
 		// Use Exec for write operations
 		tag, err := pool.Exec(ctx, query)
 		if err != nil {
-			return &model.QueryResult{OK: false, Message: err.Error()}
+			return &model.QueryResult{
+				OK:           true,
+				Message:      err.Error(),
+				RowsAffected: int64(0),
+				Columns:      []string{"Error"},
+				Rows:         [][]model.Cell{{model.Cell{Column: "Error", Value: err.Error()}}},
+			}
 		}
 		response.RowsAffected = tag.RowsAffected()
 		response.Columns = []string{"Rows Affected"}
@@ -516,7 +523,13 @@ func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, tabID i
 		// Use Query for read operations
 		resultRows, err := pool.Query(ctx, query)
 		if err != nil {
-			return &model.QueryResult{OK: false, Message: err.Error()}
+			return &model.QueryResult{
+				OK:           true,
+				Message:      err.Error(),
+				RowsAffected: int64(0),
+				Columns:      []string{"Error"},
+				Rows:         [][]model.Cell{{model.Cell{Column: "Error", Value: err.Error()}}},
+			}
 		}
 		defer resultRows.Close()
 
@@ -545,8 +558,15 @@ func (c *Connections) ExecuteQuery(activePoolID uuid.UUID, query string, tabID i
 					newCell.Value = string(v)
 				case time.Time:
 					newCell.Value = v.Format(time.RFC3339)
-				case uuid.UUID:
-					newCell.Value = v.String()
+				case nil:
+					newCell.Value = "NULL"
+				case [16]uint8:
+					newCell.Value = uuid.UUID(v).String()
+				case string:
+					if v == "" {
+						newCell.Value = "EMPTY"
+					}
+					newCell.Value = v
 				default:
 					newCell.Value = fmt.Sprintf("%v", v)
 				}
@@ -619,7 +639,13 @@ func (c *Connections) GetTableData(activePoolID uuid.UUID, tabID int64, tableNam
 	// Use Query for read operations
 	resultRows, err := pool.Query(ctx, query)
 	if err != nil {
-		return &model.QueryResult{OK: false, Message: err.Error()}
+		return &model.QueryResult{
+			OK:           true,
+			Message:      err.Error(),
+			RowsAffected: int64(0),
+			Columns:      []string{"Error"},
+			Rows:         [][]model.Cell{{model.Cell{Column: "Error", Value: err.Error()}}},
+		}
 	}
 	defer resultRows.Close()
 
@@ -648,8 +674,15 @@ func (c *Connections) GetTableData(activePoolID uuid.UUID, tabID int64, tableNam
 				newCell.Value = string(v)
 			case time.Time:
 				newCell.Value = v.Format(time.RFC3339)
-			case uuid.UUID:
-				newCell.Value = v.String()
+			case nil:
+				newCell.Value = "NULL"
+			case [16]uint8:
+				newCell.Value = uuid.UUID(v).String()
+			case string:
+				if v == "" {
+					newCell.Value = "EMPTY"
+				}
+				newCell.Value = v
 			default:
 				newCell.Value = fmt.Sprintf("%v", v)
 			}

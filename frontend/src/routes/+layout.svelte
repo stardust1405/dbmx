@@ -31,7 +31,7 @@
 			.catch((error) => {
 				// Handle errors from the EstablishPostgresDatabaseConnection call
 				toast.error('Connection Failed', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
