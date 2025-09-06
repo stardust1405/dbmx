@@ -115,8 +115,8 @@
 						$currentColor = tab.ActiveDBColor || '';
 					}
 
-					if (tab.rows && tab.columns) {
-						// Update columns
+					// Update columns
+					if (tab.columns) {
 						for (const column of tab.columns) {
 							columns.set([
 								...$columns,
@@ -126,7 +126,10 @@
 								}
 							]);
 						}
+					}
 
+					// Update rows
+					if (tab.rows) {
 						for (const row of tab.rows) {
 							let cell: Record<string, any> = {};
 							for (const resultCell of row) {
@@ -207,7 +210,7 @@
 			})
 			.catch((error) => {
 				toast.error('Failed to add tab', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
@@ -257,8 +260,8 @@
 					$activePoolID = tab.ActiveDBID || '';
 					$currentColor = tab.ActiveDBColor || '';
 
-					if (tab.rows && tab.columns) {
-						// Update columns
+					// Update columns
+					if (tab.columns) {
 						for (const column of tab.columns) {
 							columns.set([
 								...$columns,
@@ -268,7 +271,10 @@
 								}
 							]);
 						}
+					}
 
+					// Update rows
+					if (tab.rows) {
 						for (const row of tab.rows) {
 							let cell: Record<string, any> = {};
 							for (const resultCell of row) {
@@ -283,7 +289,7 @@
 			})
 			.catch((error) => {
 				toast.error('Failed to delete tab', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
@@ -330,8 +336,8 @@
 					$currentColor = tab.ActiveDBColor || '';
 				}
 
-				if (tab.rows && tab.columns) {
-					// Update columns
+				// Update columns
+				if (tab.columns) {
 					for (const column of tab.columns) {
 						columns.set([
 							...$columns,
@@ -341,7 +347,10 @@
 							}
 						]);
 					}
+				}
 
+				// Update rows
+				if (tab.rows) {
 					for (const row of tab.rows) {
 						let cell: Record<string, any> = {};
 						for (const resultCell of row) {
@@ -355,7 +364,7 @@
 			})
 			.catch((error) => {
 				toast.error('Failed to set active tab', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
@@ -419,24 +428,29 @@
 				}
 
 				// Update columns
-				for (const column of result.columns) {
-					columns.set([
-						...$columns,
-						{
-							accessorKey: column,
-							header: column
-						}
-					]);
+				if (result.columns) {
+					for (const column of result.columns) {
+						columns.set([
+							...$columns,
+							{
+								accessorKey: column,
+								header: column
+							}
+						]);
+					}
 				}
 
-				for (const row of result.rows) {
-					let cell: Record<string, any> = {};
-					for (const resultCell of row) {
-						if (resultCell.column && resultCell.value) {
-							cell[resultCell.column] = resultCell.value;
+				// Update rows
+				if (result.rows) {
+					for (const row of result.rows) {
+						let cell: Record<string, any> = {};
+						for (const resultCell of row) {
+							if (resultCell.column && resultCell.value) {
+								cell[resultCell.column] = resultCell.value;
+							}
 						}
+						rows.set([...$rows, cell]);
 					}
-					rows.set([...$rows, cell]);
 				}
 				queryLoading = false;
 			})
@@ -444,7 +458,7 @@
 				queryLoading = false;
 				// Handle errors from the ExecuteQuery call
 				toast.error('Query Failed', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
@@ -485,24 +499,29 @@
 				}
 
 				// Update columns
-				for (const column of result.columns) {
-					columns.set([
-						...$columns,
-						{
-							accessorKey: column,
-							header: column
-						}
-					]);
+				if (result.columns) {
+					for (const column of result.columns) {
+						columns.set([
+							...$columns,
+							{
+								accessorKey: column,
+								header: column
+							}
+						]);
+					}
 				}
 
-				for (const row of result.rows) {
-					let cell: Record<string, any> = {};
-					for (const resultCell of row) {
-						if (resultCell.column && resultCell.value) {
-							cell[resultCell.column] = resultCell.value;
+				// Update rows
+				if (result.rows) {
+					for (const row of result.rows) {
+						let cell: Record<string, any> = {};
+						for (const resultCell of row) {
+							if (resultCell.column && resultCell.value) {
+								cell[resultCell.column] = resultCell.value;
+							}
 						}
+						rows.set([...$rows, cell]);
 					}
-					rows.set([...$rows, cell]);
 				}
 				queryLoading = false;
 			})
@@ -510,7 +529,7 @@
 				queryLoading = false;
 				// Handle errors from the ExecuteQuery call
 				toast.error('Query Failed', {
-					description: error,
+					description: error.message,
 					action: {
 						label: 'OK',
 						onClick: () => console.info('OK')
