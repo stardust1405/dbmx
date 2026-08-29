@@ -106,7 +106,7 @@ func (t *Tabs) AddTab(connID int64, activeDBPoolID string, dbName string, tabTyp
 
 	if editorFromTable {
 		// Editor default
-		editor = fmt.Sprintf("SELECT * FROM %s ORDER BY 1 LIMIT 20", tableName)
+		editor = fmt.Sprintf("SELECT * FROM \"%s\" ORDER BY 1 LIMIT 20", tableName)
 	}
 
 	// Insert a new active tab
@@ -184,7 +184,33 @@ func (t *Tabs) SetActiveTab(id int64) (*model.Tab, error) {
 
 func (t *Tabs) GetAllTabs() ([]model.Tab, error) {
 	// Query for all tabs
-	query := `SELECT id, name, editor, output, is_active, active_db_id, active_db, active_db_color, type, connection_id, db_name, connection_name, "select", "limit", "offset", "where", "order_by", "group_by", table_columns, ai_chat FROM tabs`
+	query := `
+		SELECT
+			t.id,
+			t.name,
+			t.editor,
+			t.output,
+			t.is_active,
+			t.active_db_id,
+			t.active_db,
+			c.color,
+			t.type,
+			t.connection_id,
+			t.db_name,
+			t.connection_name,
+			t."select",
+			t."limit",
+			t."offset",
+			t."where",
+			t."order_by",
+			t."group_by",
+			t.table_columns,
+			t.ai_chat
+		FROM
+			tabs t
+		INNER JOIN connections c
+		ON c.id = t.connection_id
+	`
 	rows, err := t.DB.Query(query)
 	if err != nil {
 		return nil, err

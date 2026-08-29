@@ -363,11 +363,9 @@
 						if (tab.ConnectionID === db.ConnectionID && tab.DBName === db.Name) {
 							tab.ActiveDB = '';
 							tab.ActiveDBID = '';
-							tab.ActiveDBColor = '';
 							tabsMap.set(id, tab);
 						}
 					});
-
 
 					toast.success('Disconnected ' + db.Name, {});
 				}

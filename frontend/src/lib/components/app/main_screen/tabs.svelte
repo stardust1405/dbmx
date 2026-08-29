@@ -211,12 +211,15 @@
 			syncTabOrder();
 			
 		} else {
+			console.log("loading tabs from db")
 			GetAllTabs().then((tabs) => {
 				if (!tabs) {
 					return;
 				}
 				for (const tab of tabs) {
 					tabsMap.set(tab.ID, tab);
+
+					console.log(tab)
 
 					// Set active tab properties
 					if (tab.IsActive) {

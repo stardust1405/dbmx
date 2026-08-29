@@ -1030,7 +1030,7 @@ func (c *Connections) GetTableData(tabID int64, tableName, selectQuery, limit, o
 		selectQuery = "*"
 	}
 
-	query := fmt.Sprintf("SELECT %s FROM %s", selectQuery, tableName)
+	query := fmt.Sprintf("SELECT %s FROM \"%s\"", selectQuery, tableName)
 	if strings.TrimSpace(where) != "" {
 		query += fmt.Sprintf(" WHERE %s", strings.TrimSpace(where))
 	}
@@ -1045,7 +1045,7 @@ func (c *Connections) GetTableData(tabID int64, tableName, selectQuery, limit, o
 
 	if !isPageData {
 		// Get total rows count
-		totalRowsQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+		totalRowsQuery := fmt.Sprintf("SELECT COUNT(*) FROM \"%s\"", tableName)
 		if strings.TrimSpace(where) != "" {
 			totalRowsQuery += fmt.Sprintf(" WHERE %s", strings.TrimSpace(where))
 		}
@@ -1145,7 +1145,7 @@ func (c *Connections) GetTableData(tabID int64, tableName, selectQuery, limit, o
 func (c *Connections) GetTableInfo(tabID int64, tableName string) (*model.TableInfo, error) {
 	// Fetch Active Pool ID from Tab
 	var activePoolID *string
-	err := c.DB.QueryRow("SELECT active_db_id FROM tabs WHERE id = ?", tabID).Scan(&activePoolID)
+	err := c.DB.QueryRow("SELECT active_db_id FROM \"tabs\" WHERE id = ?", tabID).Scan(&activePoolID)
 	if err != nil {
 		return nil, errors.Wrap(err, "Tab doesn't exist")
 	}
@@ -1224,7 +1224,7 @@ func (c *Connections) GetTableInfo(tabID int64, tableName string) (*model.TableI
 		LEFT JOIN pg_catalog.pg_description pgd
 			ON pgd.objoid = st.relid
 		AND pgd.objsubid = c.ordinal_position
-		WHERE c.table_name = $1
+		WHERE c.table_name = "$1"
 		AND c.table_schema = 'public'
 		ORDER BY c.ordinal_position;
 	`
@@ -1300,7 +1300,7 @@ func (c *Connections) GetTableInfo(tabID int64, tableName string) (*model.TableI
 		JOIN pg_index idx ON t.oid = idx.indrelid
 		JOIN pg_class i   ON i.oid = idx.indexrelid
 		JOIN pg_am am     ON i.relam = am.oid
-		WHERE t.relname = $1
+		WHERE t.relname = "$1"
 		AND t.relnamespace = 'public'::regnamespace  -- adjust schema if needed
 		ORDER BY i.relname DESC;
 	`
@@ -1376,7 +1376,7 @@ func (c *Connections) GetTableInfo(tabID int64, tableName string) (*model.TableI
 		FROM pg_constraint con
 		JOIN pg_class rel   ON rel.oid = con.conrelid
 		JOIN pg_namespace n ON n.oid = rel.relnamespace
-		WHERE rel.relname = $1
+		WHERE rel.relname = "$1"
 		AND n.nspname = 'public'   -- adjust schema if needed
 		ORDER BY con.contype ASC;
 	`
