@@ -1,11 +1,29 @@
 {
   "version": 1,
   "skills": {
+    "golang-performance": {
+      "source": "samber/cc-skills-golang",
+      "sourceType": "github",
+      "skillPath": "skills/golang-performance/SKILL.md",
+      "computedHash": "80d84fb4b2ca42ec2ec9f177ccc9b3d183b4fa900c1d52c40fd698b8f8b46452"
+    },
     "shadcn-svelte": {
       "source": "huntabyte/shadcn-svelte",
       "sourceType": "github",
       "skillPath": "skills/shadcn-svelte/SKILL.md",
       "computedHash": "d4f3f983a71466a86649985a8a7fbce47da29f44de3a9d02540bbcf3167134e0"
+    },
+    "svelte5-best-practices": {
+      "source": "ejirocodes/agent-skills",
+      "sourceType": "github",
+      "skillPath": "svelte/skills/svelte5-best-practices/SKILL.md",
+      "computedHash": "bfcbba3d355aede6f6be9720f195206d4dcaa7c152787ea00c06cb4a1ac44ba4"
+    },
+    "wails": {
+      "source": "codegirl-007/aiplatform",
+      "sourceType": "github",
+      "skillPath": ".opencode/skills/wails/SKILL.md",
+      "computedHash": "bf6f69682da4c8c7ac3a30da2efcf7ce4438bf9d5d312dfbb80855c0ce51b98a"
     }
   }
 }
