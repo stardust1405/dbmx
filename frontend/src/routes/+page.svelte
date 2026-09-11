@@ -139,17 +139,17 @@
 	}
 
 	function toggleChatPane() {
-		if (!$userIsAIEnabled) {
-			toast.error('Not Enabled', {
-					description: "Stardust AI is not enabled. Please enable it in the LLM Manager",
-					action: {
-						label: 'OK',
-						onClick: () => console.info('OK')
-					}
-				});
-			return;
-		}
 		if (chatPaneCollapsed) {
+			if (!$userIsAIEnabled) {
+				toast.error('Not Enabled', {
+						description: "Stardust AI is not enabled. Please enable it in the LLM Manager",
+						action: {
+							label: 'OK',
+							onClick: () => console.info('OK')
+						}
+					});
+				return;
+			}
 			if (tabsMap.size === 0) {
 				toast.error('No tab is open', {
 						description: "Please open a tab to use AI features",
@@ -457,7 +457,9 @@
 				<Spinner class="size-6 text-yellow-500"/>
 				<span>Loading models...</span>
 			{:else}
-				{#if $availableModels.length == 0}
+				{#if !$userIsAIEnabled}
+					<span class="p-4">Stardust AI is not enabled. Please enable it in the LLM Manager</span>
+				{:else if $availableModels.length == 0}
 					<span class="p-4">No models found. Please configure them in LLM Manager</span>
 				{:else}
 					<div class="flex w-full flex-[5] items-center justify-center">
