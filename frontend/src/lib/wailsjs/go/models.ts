@@ -143,6 +143,34 @@ export namespace model {
 	        this.comment = source["comment"];
 	    }
 	}
+	export class ColumnType {
+	    name: string;
+	    dataType: string;
+	    displayType: string;
+	    category: string;
+	    isNullable: boolean;
+	    isPrimaryKey: boolean;
+	    isCompositeKey: boolean;
+	    isForeignKey: boolean;
+	    foreignKeyTable: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ColumnType(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.dataType = source["dataType"];
+	        this.displayType = source["displayType"];
+	        this.category = source["category"];
+	        this.isNullable = source["isNullable"];
+	        this.isPrimaryKey = source["isPrimaryKey"];
+	        this.isCompositeKey = source["isCompositeKey"];
+	        this.isForeignKey = source["isForeignKey"];
+	        this.foreignKeyTable = source["foreignKeyTable"];
+	    }
+	}
 	export class Connection {
 	    ID: number;
 	    Engine: string;
@@ -364,6 +392,7 @@ export namespace model {
 	export class QueryResult {
 	    ok: boolean;
 	    columns: string[];
+	    columnTypes: ColumnType[];
 	    rows: Cell[][];
 	    totalRows: number;
 	    rowsAffected: number;
@@ -379,6 +408,7 @@ export namespace model {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.ok = source["ok"];
 	        this.columns = source["columns"];
+	        this.columnTypes = this.convertValues(source["columnTypes"], ColumnType);
 	        this.rows = this.convertValues(source["rows"], Cell);
 	        this.totalRows = source["totalRows"];
 	        this.rowsAffected = source["rowsAffected"];
@@ -556,6 +586,7 @@ export namespace model {
 	    ActiveDBColor?: string;
 	    Type: string;
 	    columns: string[];
+	    columnTypes: ColumnType[];
 	    rows: Cell[][];
 	    totalRows: number;
 	    currentPage: number;
@@ -590,6 +621,7 @@ export namespace model {
 	        this.ActiveDBColor = source["ActiveDBColor"];
 	        this.Type = source["Type"];
 	        this.columns = source["columns"];
+	        this.columnTypes = this.convertValues(source["columnTypes"], ColumnType);
 	        this.rows = this.convertValues(source["rows"], Cell);
 	        this.totalRows = source["totalRows"];
 	        this.currentPage = source["currentPage"];

@@ -26,8 +26,10 @@
 	let meta = $state<ColumnInfo[]>([]);
 
 	// Names alone still drive completion if the metadata call fails or hasn't landed.
+	// The list is normalised rather than trusted: it arrives from Go, where a nil
+	// slice crosses the boundary as null, which no prop default fills in.
 	const columns = $derived<ColumnInfo[]>(
-		meta.length > 0 ? meta : columnNames.map((name) => ({ name }))
+		meta.length > 0 ? meta : (columnNames ?? []).map((name) => ({ name }))
 	);
 
 	$effect(() => {

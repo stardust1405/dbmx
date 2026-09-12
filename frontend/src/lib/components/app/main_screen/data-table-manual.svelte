@@ -19,7 +19,7 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { FlexRender } from '$lib/components/ui/data-table/index.js';
+	import { ColumnTypeTag, FlexRender } from '$lib/components/ui/data-table/index.js';
 	import ChevronsLeftIcon from '@tabler/icons-svelte/icons/chevrons-left';
 	import ChevronLeftIcon from '@tabler/icons-svelte/icons/chevron-left';
 	import ChevronRightIcon from '@tabler/icons-svelte/icons/chevron-right';
@@ -333,12 +333,23 @@
 								/>
 							</Table.Head>
 							{#each headerGroup.headers as header (header.id)}
-								<Table.Head colspan={header.colSpan} class="text-center">
+								<!-- The cells below are text-start with px-4, so the header reads down
+								     the same left edge as the values it names. The checkbox gutter keeps
+								     its own zero padding, which .select-column sets at higher specificity. -->
+								<Table.Head colspan={header.colSpan} class="px-4">
 									{#if !header.isPlaceholder}
-										<FlexRender
-											content={header.column.columnDef.header}
-											context={header.getContext()}
-										/>
+										<span class="items-center justify-center">
+											<!-- The th clips its own overflow, but it cannot put an ellipsis on text
+											     nested inside a flex box, so the name carries the truncation itself
+											     and the icon holds its width beside it. -->
+											<span class="min-w-0 truncate">
+												<FlexRender
+													content={header.column.columnDef.header}
+													context={header.getContext()}
+												/>
+											</span>
+											<ColumnTypeTag columnType={header.column.columnDef.meta?.columnType} />
+										</span>
 									{/if}
 								</Table.Head>
 							{/each}
@@ -682,5 +693,22 @@
 	}
 	:global(table.dbmx-grid tbody td:has(+ td:not(.select-column):hover)) {
 		border-right-color: hsl(var(--grid-accent));
+	}
+
+	/* On the final row the cell's bottom edge is shared with the table's own outer
+	   border, which the table paints itself, over the cell's -- so the hover box
+	   came out with three sides. It is the same contest the selected last row loses
+	   above, and it is settled the same way: an overlay box, which paints in a later
+	   stage and lands on top. Only the bottom line is redrawn; the other three sides
+	   the cell wins outright. */
+	:global(table.dbmx-grid tbody tr:last-child td:not(.select-column):hover) {
+		position: relative;
+	}
+	:global(table.dbmx-grid tbody tr:last-child td:not(.select-column):hover::after) {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-bottom: 1px solid hsl(var(--grid-accent));
+		pointer-events: none;
 	}
 </style>

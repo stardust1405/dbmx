@@ -18,6 +18,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
@@ -36,6 +37,22 @@ type Connections struct {
 	// Hence use a nested map with connection uuid and table oid as key to store table name
 	tableMu         sync.RWMutex
 	tableOidNameMap map[uuid.UUID]map[uint32]string
+
+	// Map to save connection level column type oid and their display info.
+	// Type oids are per-database in the same way table oids are, so this is
+	// keyed by pool id too. Entries are only ever added, never invalidated: a
+	// type's name and category cannot change under a live oid.
+	typeMu         sync.RWMutex
+	typeOidInfoMap map[uuid.UUID]map[uint32]pgTypeInfo
+}
+
+// pgTypeInfo is what a result-set column's type oid resolves to: the name
+// postgres itself prints for the type, the short name it holds the type under,
+// and its catalog category.
+type pgTypeInfo struct {
+	Name        string
+	DisplayName string
+	Category    string
 }
 
 func NewConnections(db *sql.DB, pm *PoolManager) *Connections {
@@ -44,6 +61,7 @@ func NewConnections(db *sql.DB, pm *PoolManager) *Connections {
 		PM:              pm,
 		activeQueries:   make(map[int64]context.CancelFunc),
 		tableOidNameMap: make(map[uuid.UUID]map[uint32]string),
+		typeOidInfoMap:  make(map[uuid.UUID]map[uint32]pgTypeInfo),
 	}
 }
 
@@ -716,6 +734,7 @@ func (c *Connections) TerminatePostgresDatabaseConnection(activePoolID string, i
 	}
 
 	c.deleteTableOidNameMap(activePoolIDUUID)
+	c.deleteTypeOidInfoMap(activePoolIDUUID)
 
 	// Remove the pool from all the tabs in which it's saved
 	_, err = c.DB.Exec("UPDATE tabs SET active_db_id = NULL, active_db = NULL, active_db_color = NULL WHERE active_db_id = ?", activePoolID)
@@ -738,6 +757,7 @@ func (c *Connections) TerminateAllDatabaseConnections() error {
 		delete(c.PM.Pools, id)
 
 		c.deleteTableOidNameMap(id)
+		c.deleteTypeOidInfoMap(id)
 	}
 
 	// Build placeholders (?, ?, ?)
@@ -869,6 +889,9 @@ func (c *Connections) ExecuteQuery(tabID int64, query string, isExplain bool) mo
 			}
 		}
 		response.Columns = columnNames
+		// Resolved before the rows are read, so a result that is cut short by the
+		// timeout or the size cap still returns with its header types intact.
+		response.ColumnTypes = c.columnTypesFor(ctx, activePoolIDUUID, pool, columns)
 
 		// Set response table name if query output contains only one table data and has an id column
 		if len(tableOidSet) == 1 && idExists {
@@ -1097,6 +1120,7 @@ func (c *Connections) GetTableData(tabID int64, tableName, selectQuery, limit, o
 		columnNames[i] = string(column.Name)
 	}
 	response.Columns = columnNames
+	response.ColumnTypes = c.columnTypesFor(ctx, activePoolIDUUID, pool, columns)
 
 	var rows [][]model.Cell
 
@@ -1517,6 +1541,218 @@ func (c *Connections) deleteTableOidNameMap(activePoolID uuid.UUID) {
 	c.tableMu.Lock()
 	defer c.tableMu.Unlock()
 	delete(c.tableOidNameMap, activePoolID)
+}
+
+func (c *Connections) deleteTypeOidInfoMap(activePoolID uuid.UUID) {
+	c.typeMu.Lock()
+	defer c.typeMu.Unlock()
+	delete(c.typeOidInfoMap, activePoolID)
+}
+
+// format_type prints a type the way postgres itself writes it in DDL -- "integer"
+// rather than "int4", "text[]" rather than "_text" -- and resolves a domain or an
+// extension type by the same rule, so no list of known type names is needed here.
+// The modifier is passed as NULL deliberately: a modifier belongs to the column,
+// not the type, and leaving it off is what makes one row per oid cacheable.
+// typcategory is postgres's own single-byte "char" type, which has no binary
+// decoding into a Go string, so it is cast on the server side.
+//
+// typname is the short name -- "int4", "varchar", "timestamptz" -- except for an
+// array, which postgres names by prefixing an underscore to its element type.
+// "_text" is not a name anyone reads, so an array is printed instead.
+const columnTypeOidQuery = `
+	SELECT
+		t.oid,
+		format_type(t.oid, NULL),
+		CASE WHEN t.typcategory = 'A' THEN format_type(t.oid, NULL) ELSE t.typname END,
+		t.typcategory::text
+	FROM pg_type t
+	WHERE t.oid = ANY($1::oid[])`
+
+// columnTypesFor resolves the type of every column of a result set, for the type
+// icons the grid draws in its header.
+//
+// Resolution is best-effort. The rows of the query the user actually ran matter
+// more than the icons above them, so a failure here is logged and leaves the
+// types empty; the grid falls back to a plain header.
+func (c *Connections) columnTypesFor(ctx context.Context, activePoolID uuid.UUID, pool *pgxpool.Pool, fields []pgconn.FieldDescription) []model.ColumnType {
+	columnTypes := make([]model.ColumnType, len(fields))
+
+	// Collect the oids this pool has not resolved before. Every query after the
+	// first over the same types answers from the cache alone.
+	unresolved := []uint32{}
+	c.typeMu.RLock()
+	cached := c.typeOidInfoMap[activePoolID]
+	for i, field := range fields {
+		columnTypes[i] = model.ColumnType{Name: field.Name}
+		if info, ok := cached[field.DataTypeOID]; ok {
+			columnTypes[i].DataType = info.Name
+			columnTypes[i].DisplayType = info.DisplayName
+			columnTypes[i].Category = info.Category
+			continue
+		}
+		unresolved = append(unresolved, field.DataTypeOID)
+	}
+	c.typeMu.RUnlock()
+
+	if len(unresolved) == 0 {
+		c.applyColumnAttributes(ctx, pool, fields, columnTypes)
+		return columnTypes
+	}
+
+	rows, err := pool.Query(ctx, columnTypeOidQuery, unresolved)
+	if err != nil {
+		log.Printf("failed to resolve column type oids: %v", err)
+		c.applyColumnAttributes(ctx, pool, fields, columnTypes)
+		return columnTypes
+	}
+	defer rows.Close()
+
+	resolved := make(map[uint32]pgTypeInfo, len(unresolved))
+	for rows.Next() {
+		var oid uint32
+		var info pgTypeInfo
+		if err := rows.Scan(&oid, &info.Name, &info.DisplayName, &info.Category); err != nil {
+			log.Printf("failed to scan column type oid: %v", err)
+			c.applyColumnAttributes(ctx, pool, fields, columnTypes)
+			return columnTypes
+		}
+		resolved[oid] = info
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("failed to read column type oids: %v", err)
+		c.applyColumnAttributes(ctx, pool, fields, columnTypes)
+		return columnTypes
+	}
+
+	c.typeMu.Lock()
+	if c.typeOidInfoMap[activePoolID] == nil {
+		c.typeOidInfoMap[activePoolID] = make(map[uint32]pgTypeInfo, len(resolved))
+	}
+	for oid, info := range resolved {
+		c.typeOidInfoMap[activePoolID][oid] = info
+	}
+	c.typeMu.Unlock()
+
+	for i, field := range fields {
+		if info, ok := resolved[field.DataTypeOID]; ok {
+			columnTypes[i].DataType = info.Name
+			columnTypes[i].DisplayType = info.DisplayName
+			columnTypes[i].Category = info.Category
+		}
+	}
+
+	c.applyColumnAttributes(ctx, pool, fields, columnTypes)
+
+	return columnTypes
+}
+
+// A result column that is a plain reference to a table column carries the oid of
+// that table and the column's position in it, which is enough to read the column's
+// own rules out of the catalog. An expression, an aggregate or a literal carries
+// no table oid at all and is skipped.
+//
+// Unlike a type name, none of this is cached: the app's own schema editor can drop
+// a constraint or a NOT NULL out from under a grid that is still open, and a stale
+// "PK" in a header is worse than the round trip it saves.
+const columnAttributeQuery = `
+	SELECT
+		a.attrelid,
+		a.attnum,
+		NOT a.attnotnull,
+		pk.conkey IS NOT NULL,
+		COALESCE(cardinality(pk.conkey), 0) > 1,
+		fk.confrelid::regclass::text
+	FROM unnest($1::oid[], $2::smallint[]) AS t(attrelid, attnum)
+	JOIN pg_attribute a ON a.attrelid = t.attrelid AND a.attnum = t.attnum
+	LEFT JOIN LATERAL (
+		SELECT c.conkey
+		FROM pg_constraint c
+		WHERE c.conrelid = a.attrelid AND c.contype = 'p' AND a.attnum = ANY(c.conkey)
+		LIMIT 1
+	) pk ON true
+	LEFT JOIN LATERAL (
+		SELECT c.confrelid
+		FROM pg_constraint c
+		WHERE c.conrelid = a.attrelid AND c.contype = 'f' AND a.attnum = ANY(c.conkey)
+		ORDER BY c.conname
+		LIMIT 1
+	) fk ON true`
+
+// columnAttribute keys one row of the result above back to the field that asked
+// for it. A column can be selected twice in one query, so the pair is a lookup
+// key rather than a position.
+type columnAttributeKey struct {
+	TableOID uint32
+	AttNum   int16
+}
+
+// applyColumnAttributes fills in the key and nullability flags of every result
+// column that has a table column behind it. Like type resolution it is
+// best-effort: a failure leaves the flags unset and the header simply shows the
+// column's type without its badges.
+func (c *Connections) applyColumnAttributes(ctx context.Context, pool *pgxpool.Pool, fields []pgconn.FieldDescription, columnTypes []model.ColumnType) {
+	tableOIDs := []uint32{}
+	attNums := []int16{}
+	for _, field := range fields {
+		if field.TableOID == 0 {
+			continue
+		}
+		tableOIDs = append(tableOIDs, field.TableOID)
+		attNums = append(attNums, int16(field.TableAttributeNumber))
+	}
+	if len(tableOIDs) == 0 {
+		return
+	}
+
+	rows, err := pool.Query(ctx, columnAttributeQuery, tableOIDs, attNums)
+	if err != nil {
+		log.Printf("failed to resolve column attributes: %v", err)
+		return
+	}
+	defer rows.Close()
+
+	attributes := make(map[columnAttributeKey]model.ColumnType, len(tableOIDs))
+	for rows.Next() {
+		var key columnAttributeKey
+		var attribute model.ColumnType
+		var foreignKeyTable *string
+		if err := rows.Scan(
+			&key.TableOID,
+			&key.AttNum,
+			&attribute.IsNullable,
+			&attribute.IsPrimaryKey,
+			&attribute.IsCompositeKey,
+			&foreignKeyTable,
+		); err != nil {
+			log.Printf("failed to scan column attribute: %v", err)
+			return
+		}
+		if foreignKeyTable != nil {
+			attribute.IsForeignKey = true
+			attribute.ForeignKeyTable = *foreignKeyTable
+		}
+		attributes[key] = attribute
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("failed to read column attributes: %v", err)
+		return
+	}
+
+	for i, field := range fields {
+		attribute, ok := attributes[columnAttributeKey{
+			TableOID: field.TableOID,
+			AttNum:   int16(field.TableAttributeNumber),
+		}]
+		if !ok {
+			continue
+		}
+		columnTypes[i].IsNullable = attribute.IsNullable
+		columnTypes[i].IsPrimaryKey = attribute.IsPrimaryKey
+		columnTypes[i].IsCompositeKey = attribute.IsCompositeKey
+		columnTypes[i].IsForeignKey = attribute.IsForeignKey
+		columnTypes[i].ForeignKeyTable = attribute.ForeignKeyTable
+	}
 }
 
 // poolForTab resolves the live pgx pool a tab is currently pointed at.
