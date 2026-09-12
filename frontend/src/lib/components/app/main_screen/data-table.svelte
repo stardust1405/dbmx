@@ -112,6 +112,7 @@
 	import type { model } from '$lib/wailsjs/go/models';
 	import { UpdateCells } from '$lib/wailsjs/go/app/Connections';
 	import { Clock } from 'lucide-svelte';
+	import ExportMenu from './export-menu.svelte';
 
 
 
@@ -119,6 +120,8 @@
 	let editingCellValue: any = $state(null);
 
 	let updateCellPayload = $state<model.UpdateCell[]>([]);
+
+	const exportFileName = $derived(String(tableName ?? '').trim() || 'query-results');
 
 	function addUpdateCellPayload(cellId: string, rowId: number, columnId: string, value: any) {
 		let payload = updateCellPayload.find((item) => item.CellID === cellId);
@@ -281,11 +284,13 @@
 		<div
 			class="position-sticky bottom-0 mt-1 bg-background flex w-full items-center justify-between px-4 py-1 rounded-3xl"
 		>
-			<div class="text-muted-foreground hidden flex-1 text-sm lg:flex items-center gap-4">
-				<span>{table.getFilteredRowModel().rows.length} row(s)</span>
+			<div class="flex flex-1 items-center gap-4">
+				<ExportMenu {tabID} fileName={exportFileName} />
+				<span class="text-muted-foreground hidden text-sm lg:flex"
+					>{table.getFilteredRowModel().rows.length} row(s)</span
+				>
 				{#if lastQueryExecutionTime > 0}
-					
-					<span class="text-green-500 text-sm lg:flex flex-1"> <Clock size=16 class='mx-2 self-center' color='yellow' /> {lastQueryExecutionTime} ms</span>
+					<span class="text-green-500 text-sm lg:flex"> <Clock size=16 class='mx-2 self-center' color='yellow' /> {lastQueryExecutionTime} ms</span>
 				{/if}
 			</div>
 			<div class="flex w-full items-center gap-8 lg:w-fit">

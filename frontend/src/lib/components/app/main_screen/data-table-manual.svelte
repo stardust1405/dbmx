@@ -34,13 +34,18 @@
 	import AddRowSheet from './add-row-sheet.svelte';
 	import { Checkbox } from '$lib/components/ui/checkbox/index.js';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
+	import ExportMenu from './export-menu.svelte';
 
 
 	let {
 		tabID,
         tableName,
         getTablePageData,
-		lastQueryExecutionTime = 0
+		lastQueryExecutionTime = 0,
+		select = '',
+		where = '',
+		orderBy = '',
+		groupBy = ''
 	} = $props();
 
 	let sorting = $state<SortingState>([]);
@@ -439,6 +444,15 @@
 					<Plus data-icon="inline-start" />
 					Add Row
 				</Button>
+				<ExportMenu
+					{tabID}
+					fileName={tableName}
+					{tableName}
+					{select}
+					{where}
+					{orderBy}
+					{groupBy}
+				/>
 				{#if selectedRows.length > 0}
 					<Button
 						variant="destructive"
