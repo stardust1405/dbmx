@@ -145,3 +145,97 @@ type InsertValue struct {
 	ColumnName string  `json:"columnName"`
 	Value      *string `json:"value"`
 }
+
+// ColumnDefinition is the editable shape of one column, used by both the
+// add-column and edit-column forms. It is deliberately separate from ColumnMeta:
+// ColumnMeta describes a column so a *value* can be entered into it, while this
+// describes a column so the *column itself* can be created or altered.
+type ColumnDefinition struct {
+	Name string `json:"name"`
+	// DataType is the type as written in DDL, modifier included:
+	// "character varying(255)", "numeric(10,2)", "text[]", "public.mood".
+	DataType   string `json:"dataType"`
+	IsNullable bool   `json:"isNullable"`
+	// DefaultValue is a raw SQL expression ("now()", "0", "'draft'::text").
+	// Empty means the column has no default.
+	DefaultValue string `json:"defaultValue"`
+	// Identity is "", "BY DEFAULT" or "ALWAYS" for GENERATED ... AS IDENTITY.
+	Identity string `json:"identity"`
+	// GeneratedExpression is the GENERATED ALWAYS AS (...) STORED expression.
+	// Postgres cannot alter one in place, so on edit it is read-only: the form
+	// may clear it (which drops the expression) but not rewrite it.
+	GeneratedExpression string `json:"generatedExpression"`
+	Collation           string `json:"collation"`
+	Comment             string `json:"comment"`
+	// UsingExpression is the USING clause of ALTER COLUMN ... TYPE, needed when
+	// the old and new types have no assignment cast. Ignored when adding.
+	UsingExpression string `json:"usingExpression"`
+	// IsPrimaryKey is display-only: the constraint itself is managed under Rules.
+	IsPrimaryKey bool `json:"isPrimaryKey"`
+}
+
+// IndexDefinition is one index, held as the structured parts of a CREATE INDEX
+// rather than as statement text, so the form can round-trip an existing index
+// through the catalog without parsing pg_get_indexdef output.
+type IndexDefinition struct {
+	Name     string `json:"name"`
+	Method   string `json:"method"`
+	IsUnique bool   `json:"isUnique"`
+	// Columns are key column expressions exactly as postgres renders them,
+	// operator class and ordering included: "email", "lower(name)", "id DESC".
+	Columns []string `json:"columns"`
+	// Include are non-key payload columns (INCLUDE, postgres 11+).
+	Include []string `json:"include"`
+	// Where is the partial-index predicate; empty means the index covers every row.
+	Where   string `json:"where"`
+	Comment string `json:"comment"`
+	// IsConstraint marks an index postgres created to back a constraint. Such an
+	// index cannot be dropped or recreated on its own; it is edited under Rules.
+	IsConstraint bool `json:"isConstraint"`
+	IsPrimary    bool `json:"isPrimary"`
+}
+
+// ConstraintDefinition is one table constraint. The body is carried as the text
+// pg_get_constraintdef renders -- "CHECK ((price > 0))", "FOREIGN KEY (a) REFERENCES
+// b(id) ON DELETE CASCADE" -- because that covers every constraint type postgres
+// has, including EXCLUDE, without the model growing a branch per type. The form
+// composes the body from structured inputs and still lets it be edited by hand.
+type ConstraintDefinition struct {
+	Name string `json:"name"`
+	// Type is PRIMARY KEY, UNIQUE, CHECK, FOREIGN KEY or EXCLUDE.
+	Type       string `json:"type"`
+	Definition string `json:"definition"`
+	Comment    string `json:"comment"`
+	// NotValid adds the constraint without checking existing rows (CHECK and
+	// FOREIGN KEY only).
+	NotValid bool `json:"notValid"`
+	// IsValidated reports whether postgres has verified the existing rows.
+	IsValidated bool `json:"isValidated"`
+}
+
+// TypeOption is one type the column editor offers. Kind distinguishes the
+// built-ins from a database's own enums, domains and composites.
+type TypeOption struct {
+	Name string `json:"name"`
+	// Kind is base, enum, domain, range or composite.
+	Kind   string `json:"kind"`
+	Schema string `json:"schema"`
+	// IsCommon marks the handful of types worth surfacing before the full list.
+	IsCommon bool `json:"isCommon"`
+	// AcceptsModifier reports whether the type takes a modifier -- a length for
+	// character varying, a precision and scale for numeric, fractional seconds for
+	// the datetime types. It comes from pg_type.typmodin, so a domain or extension
+	// type that takes one is recognised alongside the built-ins.
+	AcceptsModifier bool `json:"acceptsModifier"`
+	// EnumValues are the labels of an enum type, for display next to its name.
+	EnumValues []string `json:"enumValues"`
+}
+
+// SchemaEditorOptions is everything the three schema forms need to populate their
+// selects, fetched in one round trip when a form opens.
+type SchemaEditorOptions struct {
+	Types        []TypeOption `json:"types"`
+	IndexMethods []string     `json:"indexMethods"`
+	Collations   []string     `json:"collations"`
+	Tables       []string     `json:"tables"`
+}

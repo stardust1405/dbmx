@@ -1296,7 +1296,9 @@ func (c *Connections) GetTableInfo(tabID int64, tableName string) (*model.TableI
 			pg_get_expr(idx.indpred, idx.indrelid)     AS condition,
 			-- included (non-key) columns, if present (v11+); otherwise NULL
 			substring(pg_get_indexdef(idx.indexrelid) from 'INCLUDE \(([^)]*)\)') AS include,
-			obj_description(i.oid, 'pg_class')         AS comment
+			obj_description(i.oid, 'pg_class')         AS comment,
+			-- an index postgres created for a constraint is owned by that constraint
+			EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = idx.indexrelid) AS is_constraint
 		FROM pg_class t
 		JOIN pg_index idx ON t.oid = idx.indrelid
 		JOIN pg_class i   ON i.oid = idx.indexrelid
@@ -1368,7 +1370,7 @@ func (c *Connections) GetTableInfo(tabID int64, tableName string) (*model.TableI
 				WHEN 'u' THEN 'UNIQUE'
 				WHEN 'f' THEN 'FOREIGN KEY'
 				WHEN 'c' THEN 'CHECK'
-				WHEN 'x' THEN 'EXCLUSION'
+				WHEN 'x' THEN 'EXCLUDE'
 				ELSE con.contype::text
 			END                AS constraint_type,
 			pg_get_constraintdef(con.oid) AS definition,
