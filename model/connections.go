@@ -113,3 +113,35 @@ type UpdateCell struct {
 	ColumnName string
 	Value      any
 }
+
+// ColumnMeta describes one column of a table. It carries everything the insert-row
+// form needs to render an input for *any* postgres type: Category is the column
+// type's pg_type.typcategory, so widget choice is driven by the catalog instead of
+// a hardcoded list of type names, and CastType is the type every value is cast to.
+type ColumnMeta struct {
+	Name string `json:"name"`
+	// DataType is format_type with the type modifier, e.g. "character varying(255)" — display only.
+	DataType string `json:"dataType"`
+	// CastType is format_type without the type modifier, e.g. "character varying".
+	// It picks the input widget on the frontend; it is deliberately NOT used to cast
+	// inserted values -- see InsertRow for why an explicit cast corrupts bit/character.
+	CastType string `json:"castType"`
+	// Category is pg_type.typcategory: B bool, N numeric, S string, D datetime,
+	// E enum, A array, U user-defined (json, uuid, inet, bytea, ...), etc.
+	Category     string `json:"category"`
+	IsNullable   bool   `json:"isNullable"`
+	HasDefault   bool   `json:"hasDefault"`
+	DefaultValue string `json:"defaultValue"`
+	// IsReadOnly marks identity-always and generated-stored columns, which cannot be inserted into.
+	IsReadOnly   bool     `json:"isReadOnly"`
+	IsPrimaryKey bool     `json:"isPrimaryKey"`
+	EnumValues   []string `json:"enumValues"`
+	Comment      string   `json:"comment"`
+}
+
+// InsertValue is one column of a new row. Value nil means SQL NULL; columns the
+// user leaves at their database default are omitted from the payload entirely.
+type InsertValue struct {
+	ColumnName string  `json:"columnName"`
+	Value      *string `json:"value"`
+}

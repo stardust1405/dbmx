@@ -25,9 +25,13 @@ export function GetPostgresServerDatabases(arg1:number,arg2:uuid.UUID,arg3:strin
 
 export function GetSqlite3Version():Promise<string>;
 
+export function GetTableColumnsMeta(arg1:number,arg2:string):Promise<Array<model.ColumnMeta>>;
+
 export function GetTableData(arg1:number,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:boolean):Promise<model.QueryResult>;
 
 export function GetTableInfo(arg1:number,arg2:string):Promise<model.TableInfo>;
+
+export function InsertRow(arg1:number,arg2:string,arg3:Array<model.InsertValue>):Promise<boolean>;
 
 export function RefreshPostgresDatabase(arg1:number,arg2:string,arg3:string,arg4:string):Promise<model.Database>;
 

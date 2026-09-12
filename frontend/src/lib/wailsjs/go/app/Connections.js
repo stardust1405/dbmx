@@ -46,12 +46,20 @@ export function GetSqlite3Version() {
   return window['go']['app']['Connections']['GetSqlite3Version']();
 }
 
+export function GetTableColumnsMeta(arg1, arg2) {
+  return window['go']['app']['Connections']['GetTableColumnsMeta'](arg1, arg2);
+}
+
 export function GetTableData(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {
   return window['go']['app']['Connections']['GetTableData'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
 }
 
 export function GetTableInfo(arg1, arg2) {
   return window['go']['app']['Connections']['GetTableInfo'](arg1, arg2);
+}
+
+export function InsertRow(arg1, arg2, arg3) {
+  return window['go']['app']['Connections']['InsertRow'](arg1, arg2, arg3);
 }
 
 export function RefreshPostgresDatabase(arg1, arg2, arg3, arg4) {

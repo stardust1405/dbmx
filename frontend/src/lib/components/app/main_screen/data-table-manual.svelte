@@ -30,7 +30,8 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import type { model } from '$lib/wailsjs/go/models';
 	import { UpdateCells } from '$lib/wailsjs/go/app/Connections';
-	import { Clock } from 'lucide-svelte';
+	import { Clock, Plus } from 'lucide-svelte';
+	import AddRowSheet from './add-row-sheet.svelte';
 
 
 	let {
@@ -141,6 +142,15 @@
 	let editedCellsMap = $state(new SvelteMap<string, string>());
 	let editingCellValue: any = $state(null);
 
+	let addRowOpen = $state(false);
+
+	// Refresh the page the user is on. The page fetch skips the COUNT(*), so the
+	// total is adjusted here for the single row that was just inserted.
+	function onRowInserted() {
+		totalRows.update((total) => total + 1);
+		getTablePageData(String($currentPageSize), String($currentPage * $currentPageSize));
+	}
+
 	let updateCellPayload = $state<model.UpdateCell[]>([]);
 
 	function addUpdateCellPayload(cellId: string, rowId: number, columnId: string, value: any) {
@@ -163,6 +173,12 @@
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
+		// The add-row sheet owns the keyboard while it is open, so Escape closes it
+		// instead of discarding pending cell edits behind it.
+		if (addRowOpen) {
+			return;
+		}
+
         // Command/Ctrl + S
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
             event.preventDefault();
@@ -206,6 +222,8 @@
 </script>
 
 <svelte:document onkeydown={handleKeyDown} />
+
+<AddRowSheet {tabID} {tableName} bind:open={addRowOpen} onInserted={onRowInserted} />
 
 <div class="h-full w-full overflow-auto">
 	<div class="flex h-full flex-col">
@@ -294,8 +312,14 @@
 		<div
 			class="position-sticky bottom-0 mt-1 bg-background flex w-full items-center justify-between px-4 py-1 rounded-3xl"
 		>
-			<div class="text-muted-foreground hidden flex-1 text-sm lg:flex">
-				Total Rows: {$totalRows}
+			<div class="flex flex-1 items-center gap-3">
+				<Button variant="outline" size="sm" class="h-8" onclick={() => (addRowOpen = true)}>
+					<Plus data-icon="inline-start" />
+					Add Row
+				</Button>
+				<span class="text-muted-foreground hidden text-sm lg:flex">
+					Total Rows: {$totalRows}
+				</span>
 			</div>
 			{#if lastQueryExecutionTime > 0}
 				<span class="text-green-500 text-sm lg:flex flex-1"> <Clock size=16 class='mx-2 self-center' color='yellow' /> {lastQueryExecutionTime} ms</span>
