@@ -10,6 +10,10 @@ export function DeleteConnection(arg1) {
   return window['go']['app']['Connections']['DeleteConnection'](arg1);
 }
 
+export function DeleteRows(arg1, arg2, arg3) {
+  return window['go']['app']['Connections']['DeleteRows'](arg1, arg2, arg3);
+}
+
 export function EstablishPostgresConnection(arg1) {
   return window['go']['app']['Connections']['EstablishPostgresConnection'](arg1);
 }
@@ -48,6 +52,10 @@ export function GetSqlite3Version() {
 
 export function GetTableColumnsMeta(arg1, arg2) {
   return window['go']['app']['Connections']['GetTableColumnsMeta'](arg1, arg2);
+}
+
+export function GetTableDDL(arg1, arg2) {
+  return window['go']['app']['Connections']['GetTableDDL'](arg1, arg2);
 }
 
 export function GetTableData(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9) {

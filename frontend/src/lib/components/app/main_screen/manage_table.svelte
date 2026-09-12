@@ -24,6 +24,7 @@
 	// Call getTableInfo on mount
 	import { onMount } from 'svelte';
 	import DataTableManage from './data-table-manage.svelte';
+	import TableDDL from './table_ddl.svelte';
 	onMount(() => {
 		getTableInfo();
 	});
@@ -169,6 +170,17 @@
 				{/each}
 			</Button>
 		</div>
+		<div class="mt-0.5 flex flex-1 items-center justify-center">
+			<Button
+				variant={selectedView === 'sql' ? 'default' : 'outline'}
+				class="flex h-full w-full flex-col items-center justify-center"
+				onclick={() => (selectedView = 'sql')}
+			>
+				{#each 'sql'.split('') as letter}
+					<span class="flex-shrink-0 text-[16px] leading-none">{letter}</span>
+				{/each}
+			</Button>
+		</div>
 	</div>
 
 	<!-- Tab Content -->
@@ -208,6 +220,14 @@
 						<Skeleton class="my-3 h-[40px] w-full" />
 					{/if}
 				</div>
+			</div>
+		{:else if selectedView === 'sql'}
+			<div class="flex h-full min-h-0 flex-1 flex-col overflow-hidden pr-2 pb-2">
+				<!-- Keyed on the table so switching tables tears the editor down and
+				     refetches, rather than leaving the previous table's definition on screen. -->
+				{#key tabName}
+					<TableDDL {tabID} tableName={tabName} />
+				{/key}
 			</div>
 		{/if}
 	</div>

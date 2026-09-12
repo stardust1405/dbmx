@@ -1691,3 +1691,249 @@ func (c *Connections) InsertRow(tabID int64, tableName string, values []model.In
 
 	return tag.RowsAffected() > 0, nil
 }
+
+// DeleteRows deletes the rows of tableName whose primary key "id" is in rowIDs, and
+// returns how many were actually removed. Like the inline cell editor and UpdateCells,
+// it identifies a row by a column literally named "id" -- that is the grid's contract,
+// and the catalog lookup below turns a table without one into a clear error rather than
+// a raw postgres message.
+//
+// The ids arrive as text and are bound as plain parameters so postgres infers each
+// parameter's type from "id" itself, the same reasoning as InsertRow: an integer,
+// uuid, or text primary key all work without special casing, and the comparison stays
+// indexable (unlike casting the column with id::text).
+func (c *Connections) DeleteRows(tabID int64, tableName string, rowIDs []string) (int64, error) {
+	if len(rowIDs) == 0 {
+		return 0, errors.New("no rows selected")
+	}
+
+	pool, err := c.poolForTab(tabID)
+	if err != nil {
+		return 0, err
+	}
+
+	// Validates that the table exists and resolves its columns.
+	columnsMeta, err := c.GetTableColumnsMeta(tabID, tableName)
+	if err != nil {
+		return 0, err
+	}
+	hasID := false
+	for _, col := range columnsMeta {
+		if col.Name == "id" {
+			hasID = true
+			break
+		}
+	}
+	if !hasID {
+		return 0, errors.Errorf("table %q has no \"id\" column, so rows cannot be deleted from the grid", tableName)
+	}
+
+	placeholders := make([]string, 0, len(rowIDs))
+	args := make([]any, 0, len(rowIDs))
+	for _, id := range rowIDs {
+		placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)+1))
+		args = append(args, id)
+	}
+
+	query := fmt.Sprintf(
+		"DELETE FROM %s WHERE id IN (%s)",
+		pgx.Identifier{tableName}.Sanitize(),
+		strings.Join(placeholders, ", "),
+	)
+
+	tag, err := pool.Exec(context.Background(), query, args...)
+	if err != nil {
+		return 0, err
+	}
+
+	return tag.RowsAffected(), nil
+}
+
+// The DDL queries all identify the table by its regclass, so the table name is quoted
+// once into a schema-qualified literal and bound as a parameter from there on.
+const tableDDLColumnsQuery = `
+	SELECT
+		a.attname,
+		format_type(a.atttypid, a.atttypmod),
+		a.attnotnull,
+		pg_get_expr(ad.adbin, ad.adrelid),
+		a.attidentity::text,
+		a.attgenerated::text,
+		col_description(a.attrelid, a.attnum)
+	FROM pg_attribute a
+	LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
+	WHERE a.attrelid = $1::regclass
+		AND a.attnum > 0
+		AND NOT a.attisdropped
+	ORDER BY a.attnum
+`
+
+// Ordered so the primary key leads, then uniques, checks and finally foreign keys.
+const tableDDLConstraintsQuery = `
+	SELECT conname, pg_get_constraintdef(oid)
+	FROM pg_constraint
+	WHERE conrelid = $1::regclass
+	ORDER BY
+		CASE contype WHEN 'p' THEN 0 WHEN 'u' THEN 1 WHEN 'c' THEN 2 WHEN 'f' THEN 3 ELSE 4 END,
+		conname
+`
+
+// Indexes that back a constraint are excluded: they are already emitted as part of the
+// CREATE TABLE body, and re-issuing them here would be invalid.
+const tableDDLIndexesQuery = `
+	SELECT pg_get_indexdef(i.indexrelid)
+	FROM pg_index i
+	JOIN pg_class ic ON ic.oid = i.indexrelid
+	WHERE i.indrelid = $1::regclass
+		AND NOT EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = i.indexrelid)
+	ORDER BY ic.relname
+`
+
+// quoteSQLLiteral renders s as a single-quoted SQL string literal.
+func quoteSQLLiteral(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+}
+
+// GetTableDDL reconstructs a CREATE TABLE statement for tableName in the tab's active
+// database, followed by its non-constraint indexes and any table or column comments.
+//
+// Constraints and indexes are rendered by postgres itself through pg_get_constraintdef
+// and pg_get_indexdef rather than being assembled from information_schema, so partial
+// indexes, expression indexes, operator classes, ON DELETE actions and check expressions
+// all come out exactly as the server holds them. Column types likewise come from
+// format_type, which keeps the type modifier -- character varying(255), numeric(10,2).
+//
+// The result is for reading and copying, not for round-tripping a schema: it deliberately
+// omits ownership, grants, triggers, storage parameters and tablespaces.
+func (c *Connections) GetTableDDL(tabID int64, tableName string) (string, error) {
+	pool, err := c.poolForTab(tabID)
+	if err != nil {
+		return "", err
+	}
+
+	safeTable := pgx.Identifier{"public", tableName}.Sanitize()
+	ctx := context.Background()
+
+	// Columns.
+	rows, err := pool.Query(ctx, tableDDLColumnsQuery, safeTable)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	var (
+		columnLines  []string
+		columnNotes  []string
+		columnsFound bool
+	)
+	for rows.Next() {
+		var (
+			name        string
+			dataType    string
+			notNull     bool
+			defaultExpr *string
+			identity    string
+			generated   string
+			comment     *string
+		)
+		if err := rows.Scan(&name, &dataType, &notNull, &defaultExpr, &identity, &generated, &comment); err != nil {
+			return "", err
+		}
+		columnsFound = true
+
+		line := fmt.Sprintf("    %s %s", pgx.Identifier{name}.Sanitize(), dataType)
+		switch {
+		case generated == "s" && defaultExpr != nil:
+			// A stored generated column keeps its expression in pg_attrdef, but it is a
+			// GENERATED clause rather than a DEFAULT and must be written as one.
+			line += fmt.Sprintf(" GENERATED ALWAYS AS (%s) STORED", *defaultExpr)
+		case defaultExpr != nil:
+			line += " DEFAULT " + *defaultExpr
+		}
+		if notNull {
+			line += " NOT NULL"
+		}
+		switch identity {
+		case "a":
+			line += " GENERATED ALWAYS AS IDENTITY"
+		case "d":
+			line += " GENERATED BY DEFAULT AS IDENTITY"
+		}
+		columnLines = append(columnLines, line)
+
+		if comment != nil && *comment != "" {
+			columnNotes = append(columnNotes, fmt.Sprintf(
+				"COMMENT ON COLUMN %s.%s IS %s;",
+				safeTable, pgx.Identifier{name}.Sanitize(), quoteSQLLiteral(*comment),
+			))
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if !columnsFound {
+		return "", errors.Errorf("table %q not found", tableName)
+	}
+
+	// Constraints, appended to the CREATE TABLE body.
+	constraintRows, err := pool.Query(ctx, tableDDLConstraintsQuery, safeTable)
+	if err != nil {
+		return "", err
+	}
+	defer constraintRows.Close()
+
+	bodyLines := columnLines
+	for constraintRows.Next() {
+		var name, definition string
+		if err := constraintRows.Scan(&name, &definition); err != nil {
+			return "", err
+		}
+		bodyLines = append(bodyLines, fmt.Sprintf(
+			"    CONSTRAINT %s %s", pgx.Identifier{name}.Sanitize(), definition,
+		))
+	}
+	if err := constraintRows.Err(); err != nil {
+		return "", err
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "CREATE TABLE %s (\n%s\n);\n", safeTable, strings.Join(bodyLines, ",\n"))
+
+	// Standalone indexes.
+	indexRows, err := pool.Query(ctx, tableDDLIndexesQuery, safeTable)
+	if err != nil {
+		return "", err
+	}
+	defer indexRows.Close()
+
+	var indexDefs []string
+	for indexRows.Next() {
+		var definition string
+		if err := indexRows.Scan(&definition); err != nil {
+			return "", err
+		}
+		indexDefs = append(indexDefs, definition+";")
+	}
+	if err := indexRows.Err(); err != nil {
+		return "", err
+	}
+	if len(indexDefs) > 0 {
+		sb.WriteString("\n" + strings.Join(indexDefs, "\n") + "\n")
+	}
+
+	// Comments.
+	var tableComment *string
+	if err := pool.QueryRow(ctx, "SELECT obj_description($1::regclass, 'pg_class')", safeTable).Scan(&tableComment); err != nil {
+		return "", err
+	}
+	var notes []string
+	if tableComment != nil && *tableComment != "" {
+		notes = append(notes, fmt.Sprintf("COMMENT ON TABLE %s IS %s;", safeTable, quoteSQLLiteral(*tableComment)))
+	}
+	notes = append(notes, columnNotes...)
+	if len(notes) > 0 {
+		sb.WriteString("\n" + strings.Join(notes, "\n") + "\n")
+	}
+
+	return sb.String(), nil
+}
