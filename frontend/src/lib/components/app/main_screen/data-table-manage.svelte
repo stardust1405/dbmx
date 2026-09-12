@@ -23,14 +23,35 @@
 	import ChevronLeftIcon from '@tabler/icons-svelte/icons/chevron-left';
 	import ChevronRightIcon from '@tabler/icons-svelte/icons/chevron-right';
 	import ChevronsRightIcon from '@tabler/icons-svelte/icons/chevrons-right';
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu/index.js';
+	import { MoreHorizontal, Pencil, Plus, Trash2 } from 'lucide-svelte';
 
 
+	// onAdd/onEdit/onDelete are optional: a grid given none of them stays the plain
+	// viewer it was, and the actions column only appears once the view can act.
 	let {
         rows,
         columns,
-		// tableName,
-		// executeQuery
+		/** Row field holding the name of the object the row describes. */
+		nameKey = '',
+		addLabel = '',
+		onAdd,
+		onEdit,
+		onDelete,
+		/** Rows this view cannot change — an index postgres owns, for one. */
+		isLocked = () => false
+	}: {
+		rows: any[];
+		columns: any[];
+		nameKey?: string;
+		addLabel?: string;
+		onAdd?: () => void;
+		onEdit?: (name: string) => void;
+		onDelete?: (name: string) => void;
+		isLocked?: (row: Record<string, any>) => boolean;
 	} = $props();
+
+	const hasActions = $derived(nameKey !== '' && (onEdit !== undefined || onDelete !== undefined));
 
 	let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 20 });
 	let sorting = $state<SortingState>([]);
@@ -197,6 +218,11 @@
 									{/if}
 								</Table.Head>
 							{/each}
+							{#if hasActions}
+								<Table.Head class="actions-column">
+									<span class="sr-only">Actions</span>
+								</Table.Head>
+							{/if}
 						</Table.Row>
 					{/each}
 				</Table.Header>
@@ -254,10 +280,53 @@
 									<!-- {/if} -->
 								</Table.Cell>
 							{/each}
+							{#if hasActions}
+								{@const name = String((row.original as Record<string, any>)[nameKey] ?? '')}
+								{@const locked = isLocked(row.original as Record<string, any>)}
+								<Table.Cell class="actions-column h-12 px-2">
+									<DropdownMenu.Root>
+										<DropdownMenu.Trigger>
+											{#snippet child({ props })}
+												<Button
+													{...props}
+													variant="ghost"
+													size="icon"
+													class="size-8"
+													disabled={locked}
+													aria-label={`Actions for ${name}`}
+												>
+													<MoreHorizontal />
+												</Button>
+											{/snippet}
+										</DropdownMenu.Trigger>
+										<DropdownMenu.Content align="end" class="w-40">
+											{#if onEdit}
+												<DropdownMenu.Item onSelect={() => onEdit?.(name)}>
+													<Pencil />
+													Edit
+												</DropdownMenu.Item>
+											{/if}
+											{#if onDelete}
+												<!-- This build of the menu item has no destructive variant, so
+												     the colour is applied directly. -->
+												<DropdownMenu.Item
+													class="text-destructive data-[highlighted]:text-destructive"
+													onSelect={() => onDelete?.(name)}
+												>
+													<Trash2 />
+													Delete
+												</DropdownMenu.Item>
+											{/if}
+										</DropdownMenu.Content>
+									</DropdownMenu.Root>
+								</Table.Cell>
+							{/if}
 						</Table.Row>
 					{:else}
 						<Table.Row>
-							<Table.Cell colspan={columns.length} class="h-24 text-center">No results.</Table.Cell>
+							<Table.Cell colspan={columns.length + (hasActions ? 1 : 0)} class="h-24 text-center">
+								No results.
+							</Table.Cell>
 						</Table.Row>
 					{/each}
 				</Table.Body>
@@ -267,8 +336,16 @@
 		<div
 			class="position-sticky bottom-0 mt-1 bg-background flex w-full items-center justify-between px-4 py-1 rounded-3xl"
 		>
-			<div class="text-muted-foreground hidden flex-1 text-sm lg:flex items-center gap-4">
-				{table.getFilteredRowModel().rows.length} row(s)
+			<div class="flex flex-1 items-center gap-3">
+				{#if onAdd}
+					<Button variant="outline" size="sm" class="h-8" onclick={onAdd}>
+						<Plus data-icon="inline-start" />
+						{addLabel || 'Add'}
+					</Button>
+				{/if}
+				<span class="text-muted-foreground hidden text-sm lg:flex">
+					{table.getFilteredRowModel().rows.length} row(s)
+				</span>
 			</div>
 			<div class="flex w-full items-center gap-8 lg:w-fit">
 				<div class="hidden items-center gap-2 lg:flex">
@@ -360,5 +437,13 @@
 	}
 	:global(table td:last-child) {
 		border-right: none; /* Remove border on last column */
+	}
+	:global(table th.actions-column),
+	:global(table td.actions-column) {
+		width: 56px;
+		max-width: 56px;
+		text-align: center;
+		border-right: none;
+		overflow: visible;
 	}
 </style>

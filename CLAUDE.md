@@ -23,7 +23,20 @@ From `frontend/` (pnpm 10.24.0, pinned via `packageManager`):
 
 `wails dev` also serves at `http://localhost:34115`, where Go methods can be called from browser devtools. Vite is on `:5173` with `strictPort`.
 
-**There is no test suite** — no `*_test.go`, no vitest/playwright. Verification means `go build ./...`, `pnpm check`, and running the app.
+**There is almost no test suite.** No vitest/playwright, and the only Go tests are `app/table_schema_test.go`. Verification normally means `go build ./...`, `pnpm check`, and running the app.
+
+`app/table_schema_test.go` covers the schema editor (add/edit/drop for columns, indexes and constraints) against a **real postgres**, because that code's entire output is SQL text a server has to accept — a type modifier that survives the round trip, a transaction that rolls a half-applied edit back, a constraint body rendered the way `pg_get_constraintdef` prints it. None of that can be checked by compiling.
+
+It skips unless `DBMX_LIVE_PG` names a server, so `go test ./...` stays green without one:
+
+```bash
+docker run -d --name dbmx-pg -e POSTGRES_PASSWORD=dbmx -e POSTGRES_DB=dbmxtest \
+  -p 55432:5432 postgres:16
+DBMX_LIVE_PG='postgres://postgres:dbmx@localhost:55432/dbmxtest?sslmode=disable' \
+  go test ./app -run TestLive -v
+```
+
+Point it at a scratch database only — the fixtures drop and recreate their tables. Reach for it when changing anything that generates SQL; `liveConnections` gives you a `*Connections` backed by a real pool and an in-memory sqlite `tabs` row, which is the same path the Wails frontend takes.
 
 ## Required local setup
 

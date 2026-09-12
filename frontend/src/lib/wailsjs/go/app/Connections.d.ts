@@ -3,11 +3,23 @@
 import {model} from '../models';
 import {uuid} from '../models';
 
+export function AddColumn(arg1:number,arg2:string,arg3:model.ColumnDefinition):Promise<void>;
+
+export function AddConstraint(arg1:number,arg2:string,arg3:model.ConstraintDefinition):Promise<void>;
+
 export function AddPostgresConnection(arg1:model.Connection):Promise<boolean>;
+
+export function CreateIndex(arg1:number,arg2:string,arg3:model.IndexDefinition):Promise<void>;
 
 export function DeleteConnection(arg1:number):Promise<boolean>;
 
 export function DeleteRows(arg1:number,arg2:string,arg3:Array<string>):Promise<number>;
+
+export function DropColumn(arg1:number,arg2:string,arg3:string,arg4:boolean):Promise<void>;
+
+export function DropConstraint(arg1:number,arg2:string,arg3:string,arg4:boolean):Promise<void>;
+
+export function DropIndex(arg1:number,arg2:string,arg3:string,arg4:boolean):Promise<void>;
 
 export function EstablishPostgresConnection(arg1:number):Promise<Array<model.Database>>;
 
@@ -21,9 +33,17 @@ export function GetAllDatabaseColumns(arg1:uuid.UUID):Promise<Array<string>>;
 
 export function GetAllPostgresTables(arg1:uuid.UUID):Promise<Array<string>>;
 
+export function GetColumnDefinition(arg1:number,arg2:string,arg3:string):Promise<model.ColumnDefinition>;
+
 export function GetConnection(arg1:number):Promise<model.Connection>;
 
+export function GetConstraintDefinition(arg1:number,arg2:string,arg3:string):Promise<model.ConstraintDefinition>;
+
+export function GetIndexDefinition(arg1:number,arg2:string,arg3:string):Promise<model.IndexDefinition>;
+
 export function GetPostgresServerDatabases(arg1:number,arg2:uuid.UUID,arg3:string,arg4:string,arg5:string):Promise<Array<model.Database>>;
+
+export function GetSchemaEditorOptions(arg1:number):Promise<model.SchemaEditorOptions>;
 
 export function GetSqlite3Version():Promise<string>;
 
@@ -49,4 +69,10 @@ export function TypeConnectionTable():Promise<model.ConnectionTable>;
 
 export function UpdateCells(arg1:number,arg2:Array<model.UpdateCell>):Promise<boolean>;
 
+export function UpdateColumn(arg1:number,arg2:string,arg3:string,arg4:model.ColumnDefinition):Promise<void>;
+
 export function UpdateConnection(arg1:model.Connection):Promise<boolean>;
+
+export function UpdateConstraint(arg1:number,arg2:string,arg3:string,arg4:model.ConstraintDefinition):Promise<void>;
+
+export function UpdateIndex(arg1:number,arg2:string,arg3:string,arg4:model.IndexDefinition):Promise<void>;

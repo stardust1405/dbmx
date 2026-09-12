@@ -81,6 +81,36 @@ export namespace model {
 	        this.value = source["value"];
 	    }
 	}
+	export class ColumnDefinition {
+	    name: string;
+	    dataType: string;
+	    isNullable: boolean;
+	    defaultValue: string;
+	    identity: string;
+	    generatedExpression: string;
+	    collation: string;
+	    comment: string;
+	    usingExpression: string;
+	    isPrimaryKey: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ColumnDefinition(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.dataType = source["dataType"];
+	        this.isNullable = source["isNullable"];
+	        this.defaultValue = source["defaultValue"];
+	        this.identity = source["identity"];
+	        this.generatedExpression = source["generatedExpression"];
+	        this.collation = source["collation"];
+	        this.comment = source["comment"];
+	        this.usingExpression = source["usingExpression"];
+	        this.isPrimaryKey = source["isPrimaryKey"];
+	    }
+	}
 	export class ColumnMeta {
 	    name: string;
 	    dataType: string;
@@ -191,6 +221,28 @@ export namespace model {
 	        this.Database = source["Database"];
 	    }
 	}
+	export class ConstraintDefinition {
+	    name: string;
+	    type: string;
+	    definition: string;
+	    comment: string;
+	    notValid: boolean;
+	    isValidated: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConstraintDefinition(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.type = source["type"];
+	        this.definition = source["definition"];
+	        this.comment = source["comment"];
+	        this.notValid = source["notValid"];
+	        this.isValidated = source["isValidated"];
+	    }
+	}
 	export class Database {
 	    ID: string;
 	    ConnectionID: number;
@@ -217,6 +269,34 @@ export namespace model {
 	        this.IsActive = source["IsActive"];
 	        this.Tables = source["Tables"];
 	        this.Columns = source["Columns"];
+	    }
+	}
+	export class IndexDefinition {
+	    name: string;
+	    method: string;
+	    isUnique: boolean;
+	    columns: string[];
+	    include: string[];
+	    where: string;
+	    comment: string;
+	    isConstraint: boolean;
+	    isPrimary: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new IndexDefinition(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.method = source["method"];
+	        this.isUnique = source["isUnique"];
+	        this.columns = source["columns"];
+	        this.include = source["include"];
+	        this.where = source["where"];
+	        this.comment = source["comment"];
+	        this.isConstraint = source["isConstraint"];
+	        this.isPrimary = source["isPrimary"];
 	    }
 	}
 	export class Indexes {
@@ -375,6 +455,64 @@ export namespace model {
 	        this.savedAt = source["savedAt"];
 	    }
 	}
+	export class TypeOption {
+	    name: string;
+	    kind: string;
+	    schema: string;
+	    isCommon: boolean;
+	    acceptsModifier: boolean;
+	    enumValues: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TypeOption(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.kind = source["kind"];
+	        this.schema = source["schema"];
+	        this.isCommon = source["isCommon"];
+	        this.acceptsModifier = source["acceptsModifier"];
+	        this.enumValues = source["enumValues"];
+	    }
+	}
+	export class SchemaEditorOptions {
+	    types: TypeOption[];
+	    indexMethods: string[];
+	    collations: string[];
+	    tables: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SchemaEditorOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.types = this.convertValues(source["types"], TypeOption);
+	        this.indexMethods = source["indexMethods"];
+	        this.collations = source["collations"];
+	        this.tables = source["tables"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class Structure {
 	    columns: string[];
 	    rows: Cell[][];
@@ -523,6 +661,7 @@ export namespace model {
 		    return a;
 		}
 	}
+	
 	export class UpdateCell {
 	    CellID: string;
 	    TableName: string;
