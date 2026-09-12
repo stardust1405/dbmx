@@ -1014,6 +1014,30 @@ func (c *Connections) handleQueryError(err error) model.QueryResult {
 	}
 }
 
+// buildTableSelect renders the SELECT the table view runs, up to but not
+// including its LIMIT/OFFSET. The export path shares it so that "export all
+// rows" cannot drift from the filters the grid is actually paging through.
+func buildTableSelect(tableName, selectQuery, where, orderBy, groupBy string) string {
+	if strings.TrimSpace(selectQuery) == "" {
+		selectQuery = "*"
+	}
+
+	query := fmt.Sprintf("SELECT %s FROM \"%s\"", selectQuery, tableName)
+	if strings.TrimSpace(where) != "" {
+		query += fmt.Sprintf(" WHERE %s", strings.TrimSpace(where))
+	}
+	if strings.TrimSpace(groupBy) != "" {
+		query += fmt.Sprintf(" GROUP BY %s", strings.TrimSpace(groupBy))
+	}
+	if strings.TrimSpace(orderBy) != "" {
+		query += fmt.Sprintf(" ORDER BY %s", strings.TrimSpace(orderBy))
+	} else {
+		query += " ORDER BY 1"
+	}
+
+	return query
+}
+
 func (c *Connections) GetTableData(tabID int64, tableName, selectQuery, limit, offset, where, orderBy, groupBy string, isPageData bool) model.QueryResult {
 	// Fetch Active Pool ID from Tab
 	var activePoolID *string
@@ -1050,22 +1074,7 @@ func (c *Connections) GetTableData(tabID int64, tableName, selectQuery, limit, o
 		setLimit = strings.TrimSpace(limit)
 	}
 
-	if strings.TrimSpace(selectQuery) == "" {
-		selectQuery = "*"
-	}
-
-	query := fmt.Sprintf("SELECT %s FROM \"%s\"", selectQuery, tableName)
-	if strings.TrimSpace(where) != "" {
-		query += fmt.Sprintf(" WHERE %s", strings.TrimSpace(where))
-	}
-	if strings.TrimSpace(groupBy) != "" {
-		query += fmt.Sprintf(" GROUP BY %s", strings.TrimSpace(groupBy))
-	}
-	if strings.TrimSpace(orderBy) != "" {
-		query += fmt.Sprintf(" ORDER BY %s", strings.TrimSpace(orderBy))
-	} else {
-		query += " ORDER BY 1"
-	}
+	query := buildTableSelect(tableName, selectQuery, where, orderBy, groupBy)
 
 	if !isPageData {
 		// Get total rows count

@@ -39,7 +39,8 @@ func main() {
 	savedQueries := a.NewSavedQueries(db.DB)
 	auth := a.InitAuth(db.DB, env.SupabaseConfig)
 	stardust := a.NewStardust(db.DB, env, auth, pm)
-	app := NewApp(conn)
+	export := a.NewExport(conn)
+	app := NewApp(conn, export)
 
 	// Create application with options
 	err = wails.Run(&options.App{
@@ -77,6 +78,7 @@ func main() {
 			savedQueries,
 			auth,
 			stardust,
+			export,
 		},
 		// Mac platform specific options
 		Mac: &mac.Options{

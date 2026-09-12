@@ -299,6 +299,26 @@ export namespace model {
 	        this.Columns = source["Columns"];
 	    }
 	}
+	export class ExportResult {
+	    ok: boolean;
+	    canceled: boolean;
+	    path: string;
+	    rows: number;
+	    message: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ExportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ok = source["ok"];
+	        this.canceled = source["canceled"];
+	        this.path = source["path"];
+	        this.rows = source["rows"];
+	        this.message = source["message"];
+	    }
+	}
 	export class IndexDefinition {
 	    name: string;
 	    method: string;

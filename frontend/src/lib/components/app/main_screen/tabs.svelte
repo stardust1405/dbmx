@@ -1111,6 +1111,10 @@
 													tableName={tabName}
 													getTablePageData={getTablePageData}
 													{lastQueryExecutionTime}
+													{select}
+													{where}
+													{orderBy}
+													{groupBy}
 												/>
 											{/key}
 										{/if}

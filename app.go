@@ -8,13 +8,14 @@ import (
 
 // App struct
 type App struct {
-	ctx  context.Context
-	conn *app.Connections
+	ctx    context.Context
+	conn   *app.Connections
+	export *app.Export
 }
 
 // NewApp creates a new App application struct
-func NewApp(conn *app.Connections) *App {
-	return &App{conn: conn}
+func NewApp(conn *app.Connections, export *app.Export) *App {
+	return &App{conn: conn, export: export}
 }
 
 // startup is called when the app starts. The context is saved
@@ -22,6 +23,9 @@ func NewApp(conn *app.Connections) *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
+	// The save dialog is a runtime call, so Export cannot open one until the
+	// context exists. Nothing can reach it before the frontend has loaded.
+	app.SetExportContext(a.export, ctx)
 }
 
 // domReady is called after front-end resources have been loaded
