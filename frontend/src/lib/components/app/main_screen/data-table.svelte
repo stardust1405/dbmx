@@ -19,7 +19,7 @@
 	import * as Select from '$lib/components/ui/select/index.js';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Input } from '$lib/components/ui/input/index.js';
-	import { FlexRender } from '$lib/components/ui/data-table/index.js';
+	import { ColumnTypeTag, FlexRender } from '$lib/components/ui/data-table/index.js';
 	import ChevronsLeftIcon from '@tabler/icons-svelte/icons/chevrons-left';
 	import ChevronLeftIcon from '@tabler/icons-svelte/icons/chevron-left';
 	import ChevronRightIcon from '@tabler/icons-svelte/icons/chevron-right';
@@ -189,14 +189,25 @@
 			<Table.Root class="border rounded-lg rounded-b-3xl overflow-hidden">
 				<Table.Header class="bg-background text-xs font-medium">
 					{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
-						<Table.Row>
+						<Table.Row class="data-[state=selected]:bg-blue-900/50">
 							{#each headerGroup.headers as header (header.id)}
-								<Table.Head colspan={header.colSpan} class="text-center">
+								<!-- The cells below are text-start with px-4, so the header reads down
+								     the same left edge as the values it names. The checkbox gutter keeps
+								     its own zero padding, which .select-column sets at higher specificity. -->
+								<Table.Head colspan={header.colSpan}>
 									{#if !header.isPlaceholder}
-										<FlexRender
-											content={header.column.columnDef.header}
-											context={header.getContext()}
-										/>
+										<span class="inline-flex w-full items-center gap-1.5">
+											<!-- The th clips its own overflow, but it cannot put an ellipsis on text
+											     nested inside a flex box, so the name carries the truncation itself
+											     and the icon holds its width beside it. -->
+											<span class="min-w-0 truncate">
+												<FlexRender
+													content={header.column.columnDef.header}
+													context={header.getContext()}
+												/>
+											</span>
+											<ColumnTypeTag columnType={header.column.columnDef.meta?.columnType} />
+										</span>
 									{/if}
 								</Table.Head>
 							{/each}
@@ -205,7 +216,7 @@
 				</Table.Header>
 				<Table.Body class="text-sm bg-background">
 					{#each table.getRowModel().rows as row (row.id)}
-						<Table.Row>
+						<Table.Row class="data-[state=selected]:bg-blue-900/50">
 							{#each row.getVisibleCells() as cell (cell.id)}
 								<Table.Cell
 									class={`hover:bg-muted ${
@@ -259,7 +270,7 @@
 							{/each}
 						</Table.Row>
 					{:else}
-						<Table.Row>
+						<Table.Row class="data-[state=selected]:bg-blue-900/50">
 							<Table.Cell colspan={$columns.length} class="h-24 text-center">No results.</Table.Cell>
 						</Table.Row>
 					{/each}

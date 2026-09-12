@@ -31,6 +31,7 @@
 	import { toast } from 'svelte-sonner';
 	import { ExecuteQuery, GetTableData } from '$lib/wailsjs/go/app/Connections.js';
 
+	import { columnTypeMeta } from '$lib/components/ui/data-table/index.js';
 	import DataTable from './data-table.svelte';
 	import { columns, rows, totalRows, currentPage, currentPageSize } from '$lib/state.svelte';
 	import ManageTable from './manage_table.svelte';
@@ -90,6 +91,16 @@
 		dragTabId = null;
 		dragOverTabId = null;
 	}
+
+	// The tab strip iterates over the tabs themselves, not over their ids. tabOrder
+	// and tabsMap are updated one after the other, so an id in the order can spend a
+	// moment with no tab behind it; resolving here means the strip simply renders one
+	// tab fewer instead of rendering a row for a tab that is already gone.
+	const openTabs = $derived(
+		tabOrder
+			.map((id) => tabsMap.get(id))
+			.filter((tab) => tab !== undefined)
+	);
 
 	// Keep tabOrder in sync with tabsMap additions/removals
 	function syncTabOrder() {
@@ -166,7 +177,7 @@
 					where = tab.Where;
 					orderBy = tab.OrderBy;
 					groupBy = tab.GroupBy;
-					tableColumns = tab.TableColumnsList;
+					tableColumns = tab.TableColumnsList ?? [];
 					aiChat = tab.AIChat || [];
 
 					editor = tab.Editor;
@@ -176,7 +187,8 @@
 						columns.set(tab.columns.map((column, index) => ({
 							accessorKey: column,
 							id: String(index),
-							header: column
+							header: column,
+							meta: columnTypeMeta(tab.columnTypes, index)
 						})));
 					}
 
@@ -232,7 +244,7 @@
 						where = tab.Where;
 						orderBy = tab.OrderBy;
 						groupBy = tab.GroupBy;
-						tableColumns = tab.TableColumnsList;
+						tableColumns = tab.TableColumnsList ?? [];
 						aiChat = tab.AIChat || [];
 
 						editor = tab.Editor;
@@ -328,7 +340,7 @@
 				where = tab.Where;
 				orderBy = tab.OrderBy;
 				groupBy = tab.GroupBy;
-				tableColumns = tab.TableColumnsList;
+				tableColumns = tab.TableColumnsList ?? [];
 				aiChat = tab.AIChat || [];
 
 				editor = tab.Editor;
@@ -447,7 +459,7 @@
 		where = tab.Where;
 		orderBy = tab.OrderBy;
 		groupBy = tab.GroupBy;
-		tableColumns = tab.TableColumnsList;
+		tableColumns = tab.TableColumnsList ?? [];
 		aiChat = tab.AIChat || [];
 
 		editor = tab.Editor;
@@ -462,7 +474,8 @@
 			columns.set(tab.columns.map((column, index) => ({
 				accessorKey: column,
 				id: String(index),
-				header: column
+				header: column,
+				meta: columnTypeMeta(tab.columnTypes, index)
 			})));
 		}
 
@@ -540,6 +553,7 @@
 			currentTab.IsQueryRunning = true;
 			// Delete the previous output data
 			currentTab.columns = [];
+			currentTab.columnTypes = [];
 			currentTab.rows = [];
 			(currentTab as any).processedRows = []; // Clear cached rows as well
 			tabsMap.set(currentTabID, currentTab);
@@ -578,8 +592,9 @@
 					if (result.columns) {
 						columns.set(result.columns.map((column, index) => ({
 							accessorKey: column,
-							id: String(index), 
-							header: column
+							id: String(index),
+							header: column,
+							meta: columnTypeMeta(result.columnTypes, index)
 						})));
 					}
 
@@ -603,6 +618,7 @@
 				
 				if (currentTab) {
 					currentTab.columns = result.columns;
+					currentTab.columnTypes = result.columnTypes;
 					currentTab.rows = result.rows; // result.rows is Cell[][]
 					currentTab.IsQueryRunning = false;
 					currentTab.LastQueryExecutionTime = result.executionTime || 0;
@@ -677,6 +693,7 @@
 			currentTab.IsQueryRunning = true;
 			// Delete the previous output data
 			currentTab.columns = [];
+			currentTab.columnTypes = [];
 			currentTab.rows = [];
 			(currentTab as any).processedRows = []; // Clear cached rows as well
 			tabsMap.set(currentTabID, currentTab);
@@ -718,7 +735,8 @@
 							accessorKey: column,
 							id: String(index),
 							header: column,
-							size: 270,
+							meta: columnTypeMeta(result.columnTypes, index),
+							size: 270
 						})));
 					}
 
@@ -742,6 +760,7 @@
 				// Update the map with cached rows
 				if (currentTab) {
 					currentTab.columns = result.columns;
+					currentTab.columnTypes = result.columnTypes;
 					currentTab.rows = result.rows; // result.rows is Cell[][]
 					currentTab.totalRows = result.totalRows;
 					currentTab.Limit = '20';
@@ -805,6 +824,7 @@
 			currentTab.IsQueryRunning = true;
 			// Delete the previous output data
 			currentTab.columns = [];
+			currentTab.columnTypes = [];
 			currentTab.rows = [];
 			(currentTab as any).processedRows = []; // Clear cached rows as well
 			tabsMap.set(currentTabID, currentTab);
@@ -841,7 +861,8 @@
 						columns.set(result.columns.map((column, index) => ({
 							accessorKey: column,
 							id: String(index),
-							header: column
+							header: column,
+							meta: columnTypeMeta(result.columnTypes, index)
 						})));
 					}
 
@@ -866,6 +887,7 @@
 				// Update the map with cached rows
 				if (currentTab) {
 					currentTab.columns = result.columns;
+					currentTab.columnTypes = result.columnTypes;
 					currentTab.rows = result.rows; // result.rows is Cell[][]
 					currentTab.Limit = limit;
 					currentTab.currentPage = $currentPage;
@@ -962,40 +984,37 @@
 						<Sidebar.Trigger />
 					</div>
 					<div class="thin-scrollbar scrollbar-thin flex items-end overflow-x-auto overflow-y-hidden gap-0.5 px-1">
-						{#each tabOrder as id (id)}
-							{@const tab = tabsMap.get(id)}
-							{#if tab}
-								<div
-									class="{getColorClass(tab.ActiveDBColor || "")} group relative flex items-center rounded-t-lg px-3 py-1.5 transition-all duration-150 select-none
-										{tab.ID === tabID
-											? 'bg-muted text-foreground z-10'
-											: 'bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
-									draggable="true"
-									ondragstart={(e) => onTabDragStart(e, tab.ID)}
-									ondragover={(e) => onTabDragOver(e, tab.ID)}
-									ondragend={onTabDragEnd}
-									role="tab"
-									tabindex="0"
+						{#each openTabs as tab (tab.ID)}
+							<div
+								class="{getColorClass(tab.ActiveDBColor || "")} group relative flex items-center rounded-t-lg px-3 py-1.5 transition-all duration-150 select-none
+									{tab.ID === tabID
+										? 'bg-muted text-foreground z-10'
+										: 'bg-background text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
+								draggable="true"
+								ondragstart={(e) => onTabDragStart(e, tab.ID)}
+								ondragover={(e) => onTabDragOver(e, tab.ID)}
+								ondragend={onTabDragEnd}
+								role="tab"
+								tabindex="0"
+							>
+								<button
+									class="flex items-center gap-1.5 pr-2 text-sm font-medium truncate max-w-[160px]"
+									onclick={() => setActiveTab(tab.ID)}
+									title={tab.Name}
 								>
-									<button
-										class="flex items-center gap-1.5 pr-2 text-sm font-medium truncate max-w-[160px]"
-										onclick={() => setActiveTab(tab.ID)}
-										title={tab.Name}
-									>
-										{tab.Name}
-									</button>
-									<button
-										class="ml-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-muted"
-										onclick={(e) => { e.stopPropagation(); deleteTab(tab.ID); }}
-									>
-										<X size={14} />
-									</button>
-									<!-- Active tab connector to content below -->
-									{#if tab.ID === tabID}
-										<div class="absolute bottom-0 left-0 right-0 h-[2px] bg-muted"></div>
-									{/if}
-								</div>
-							{/if}
+									{tab.Name}
+								</button>
+								<button
+									class="ml-1 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive hover:bg-muted"
+									onclick={(e) => { e.stopPropagation(); deleteTab(tab.ID); }}
+								>
+									<X size={14} />
+								</button>
+								<!-- Active tab connector to content below -->
+								{#if tab.ID === tabID}
+									<div class="absolute bottom-0 left-0 right-0 h-[2px] bg-muted"></div>
+								{/if}
+							</div>
 						{/each}
 						{#if tabLoading}
 							<div class="flex items-center self-center ml-2">

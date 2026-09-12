@@ -19,10 +19,14 @@ type Tab struct {
 	Type          string
 
 	// Output
-	Columns     []string `json:"columns"`
-	Rows        [][]Cell `json:"rows"`
-	TotalRows   int64    `json:"totalRows"`
-	CurrentPage int64    `json:"currentPage"`
+	Columns []string `json:"columns"`
+	// ColumnTypes is parallel to Columns. The frontend caches it here so a tab
+	// that is switched away from and back keeps its header type icons without
+	// re-running the query.
+	ColumnTypes []ColumnType `json:"columnTypes"`
+	Rows        [][]Cell     `json:"rows"`
+	TotalRows   int64        `json:"totalRows"`
+	CurrentPage int64        `json:"currentPage"`
 
 	// Required if type is table
 	ConnectionID   *int64

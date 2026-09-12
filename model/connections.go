@@ -64,13 +64,52 @@ type Cell struct {
 	Value  string `json:"value"`
 }
 
+// ColumnType is the postgres type of one column of a result set, resolved from
+// the type OID postgres reports in the row description. It is display metadata
+// only -- the values themselves still cross the boundary as strings.
+type ColumnType struct {
+	Name string `json:"name"`
+	// DataType is the type as postgres itself prints it, without a modifier:
+	// "integer", "character varying", "timestamp with time zone", "text[]".
+	DataType string `json:"dataType"`
+	// DisplayType is the short name postgres holds the type under -- "int4",
+	// "varchar", "timestamptz" -- which is what a grid header has room for.
+	// Arrays keep the printed form instead, since "_text" names nothing a
+	// reader would recognise where "text[]" does.
+	DisplayType string `json:"displayType"`
+	// Category is pg_type.typcategory: B bool, N numeric, S string, D datetime,
+	// E enum, A array, U user-defined (json, uuid, inet, bytea, ...), etc. The
+	// grid picks a column's header icon from it, so a type the app has never
+	// heard of still gets the icon its family deserves.
+	Category string `json:"category"`
+
+	// The fields below describe the column a value came from, so they are only
+	// set for a result column that is a plain reference to a table column. An
+	// expression, an aggregate or a literal has no attribute behind it and
+	// leaves all of them at their zero value.
+
+	IsNullable   bool `json:"isNullable"`
+	IsPrimaryKey bool `json:"isPrimaryKey"`
+	// IsCompositeKey marks a primary key that spans more than one column. Such
+	// a column identifies a row only together with its siblings, which is worth
+	// saying in a grid that lets rows be edited by their key.
+	IsCompositeKey bool `json:"isCompositeKey"`
+	IsForeignKey   bool `json:"isForeignKey"`
+	// ForeignKeyTable is the table a foreign key points at, for the tooltip.
+	// A column under more than one foreign key reports the first by name.
+	ForeignKeyTable string `json:"foreignKeyTable"`
+}
+
 type QueryResult struct {
-	OK           bool     `json:"ok"`
-	Columns      []string `json:"columns"`
-	Rows         [][]Cell `json:"rows"`
-	TotalRows    int64    `json:"totalRows"`
-	RowsAffected int64    `json:"rowsAffected"`
-	Message      string   `json:"message"`
+	OK      bool     `json:"ok"`
+	Columns []string `json:"columns"`
+	// ColumnTypes is parallel to Columns. It is empty for results that have no
+	// table behind them (an error row, a write's "Rows Affected").
+	ColumnTypes  []ColumnType `json:"columnTypes"`
+	Rows         [][]Cell     `json:"rows"`
+	TotalRows    int64        `json:"totalRows"`
+	RowsAffected int64        `json:"rowsAffected"`
+	Message      string       `json:"message"`
 
 	// If query output contains data of only one table and output also contains id primary key, its name will be stored here
 	// Else it will be empty
