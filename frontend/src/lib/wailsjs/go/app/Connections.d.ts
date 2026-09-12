@@ -7,6 +7,8 @@ export function AddPostgresConnection(arg1:model.Connection):Promise<boolean>;
 
 export function DeleteConnection(arg1:number):Promise<boolean>;
 
+export function DeleteRows(arg1:number,arg2:string,arg3:Array<string>):Promise<number>;
+
 export function EstablishPostgresConnection(arg1:number):Promise<Array<model.Database>>;
 
 export function EstablishPostgresDatabaseConnection(arg1:number,arg2:string):Promise<model.Database>;
@@ -26,6 +28,8 @@ export function GetPostgresServerDatabases(arg1:number,arg2:uuid.UUID,arg3:strin
 export function GetSqlite3Version():Promise<string>;
 
 export function GetTableColumnsMeta(arg1:number,arg2:string):Promise<Array<model.ColumnMeta>>;
+
+export function GetTableDDL(arg1:number,arg2:string):Promise<string>;
 
 export function GetTableData(arg1:number,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:string,arg8:string,arg9:boolean):Promise<model.QueryResult>;
 
