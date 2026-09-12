@@ -19,6 +19,12 @@
       "skillPath": "svelte/skills/svelte5-best-practices/SKILL.md",
       "computedHash": "bfcbba3d355aede6f6be9720f195206d4dcaa7c152787ea00c06cb4a1ac44ba4"
     },
+    "sveltekit-structure": {
+      "source": "spences10/svelte-skills-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/svelte-skills/skills/sveltekit-structure/SKILL.md",
+      "computedHash": "eef66314ca437f13272afc3db7e149b0e39a8b734040d4b0affa01697352e511"
+    },
     "wails": {
       "source": "codegirl-007/aiplatform",
       "sourceType": "github",

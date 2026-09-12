@@ -18,6 +18,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/pkg/errors"
 )
@@ -1514,4 +1515,179 @@ func (c *Connections) deleteTableOidNameMap(activePoolID uuid.UUID) {
 	c.tableMu.Lock()
 	defer c.tableMu.Unlock()
 	delete(c.tableOidNameMap, activePoolID)
+}
+
+// poolForTab resolves the live pgx pool a tab is currently pointed at.
+func (c *Connections) poolForTab(tabID int64) (*pgxpool.Pool, error) {
+	var activePoolID *string
+	if err := c.DB.QueryRow("SELECT active_db_id FROM tabs WHERE id = ?", tabID).Scan(&activePoolID); err != nil {
+		return nil, errors.Wrap(err, "Tab doesn't exist")
+	}
+	if activePoolID == nil {
+		return nil, errors.New("Active pool doesn't exist in tab")
+	}
+	activePoolIDUUID, err := uuid.Parse(*activePoolID)
+	if err != nil {
+		return nil, errors.Wrap(err, "Invalid active pool in tab")
+	}
+	pool, exists := c.PM.GetPool(activePoolIDUUID)
+	if !exists {
+		return nil, errors.New("pool doesn't exist")
+	}
+	return pool, nil
+}
+
+const tableColumnsMetaQuery = `
+	SELECT
+		a.attname AS name,
+		format_type(a.atttypid, a.atttypmod) AS data_type,
+		format_type(a.atttypid, NULL) AS cast_type,
+		t.typcategory::text AS category,
+		NOT a.attnotnull AS is_nullable,
+		pg_get_expr(d.adbin, d.adrelid) AS default_value,
+		(a.attidentity = 'a' OR a.attgenerated <> '') AS is_read_only,
+		COALESCE(i.indisprimary, false) AS is_primary_key,
+		CASE WHEN t.typtype = 'e' THEN ARRAY(
+			SELECT e.enumlabel::text FROM pg_enum e
+			WHERE e.enumtypid = t.oid ORDER BY e.enumsortorder
+		) END AS enum_values,
+		col_description(a.attrelid, a.attnum) AS comment
+	FROM pg_attribute a
+	JOIN pg_class c ON c.oid = a.attrelid
+	JOIN pg_namespace n ON n.oid = c.relnamespace
+	JOIN pg_type t ON t.oid = a.atttypid
+	LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
+	LEFT JOIN pg_index i ON i.indrelid = c.oid AND i.indisprimary AND a.attnum = ANY(i.indkey)
+	WHERE n.nspname = 'public'
+		AND c.relname = $1
+		AND a.attnum > 0
+		AND NOT a.attisdropped
+	ORDER BY a.attnum
+`
+
+// GetTableColumnsMeta returns the column definitions of a table in the tab's active
+// database, ordered as declared. It drives the "add new row" form.
+func (c *Connections) GetTableColumnsMeta(tabID int64, tableName string) ([]model.ColumnMeta, error) {
+	pool, err := c.poolForTab(tabID)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := pool.Query(context.Background(), tableColumnsMetaQuery, tableName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	columns := []model.ColumnMeta{}
+	for rows.Next() {
+		var (
+			col          model.ColumnMeta
+			defaultValue *string
+			comment      *string
+			enumValues   []string
+		)
+		if err := rows.Scan(
+			&col.Name,
+			&col.DataType,
+			&col.CastType,
+			&col.Category,
+			&col.IsNullable,
+			&defaultValue,
+			&col.IsReadOnly,
+			&col.IsPrimaryKey,
+			&enumValues,
+			&comment,
+		); err != nil {
+			return nil, err
+		}
+		if defaultValue != nil {
+			col.HasDefault = true
+			col.DefaultValue = *defaultValue
+		}
+		if comment != nil {
+			col.Comment = *comment
+		}
+		col.EnumValues = enumValues
+		columns = append(columns, col)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if len(columns) == 0 {
+		return nil, errors.Errorf("table %q not found", tableName)
+	}
+
+	return columns, nil
+}
+
+// InsertRow inserts a single row into tableName. Every value is bound as a plain
+// parameter carrying its text form, so postgres infers the parameter type from the
+// target column and parses the text with that column's own input function. That is
+// the same path a hand-written INSERT takes, which means every type works without
+// special casing -- json, arrays, enums, uuid, inet, bytea, ranges, user-defined --
+// and length/precision are enforced by the column rather than by a cast. An explicit
+// cast must not be used here: $n::text::bit resolves to bit(1) and $n::text::character
+// to character(1), which silently mangle values destined for bit(4)/character(3), and
+// casting to the modified type instead silently truncates varchar and zero-pads bit.
+//
+// Columns absent from values keep their database default, and a nil Value inserts SQL NULL.
+func (c *Connections) InsertRow(tabID int64, tableName string, values []model.InsertValue) (bool, error) {
+	pool, err := c.poolForTab(tabID)
+	if err != nil {
+		return false, err
+	}
+
+	columnsMeta, err := c.GetTableColumnsMeta(tabID, tableName)
+	if err != nil {
+		return false, err
+	}
+	metaByName := make(map[string]model.ColumnMeta, len(columnsMeta))
+	for _, col := range columnsMeta {
+		metaByName[col.Name] = col
+	}
+
+	// Validate every supplied column against the catalog. Only sanitized identifiers
+	// reach the query text; the values themselves are always bound as parameters.
+	var (
+		columnList   []string
+		placeholders []string
+		args         []any
+		seen         = make(map[string]bool, len(values))
+	)
+	for _, v := range values {
+		col, ok := metaByName[v.ColumnName]
+		if !ok {
+			return false, errors.Errorf("column %q doesn't exist on table %q", v.ColumnName, tableName)
+		}
+		if col.IsReadOnly {
+			return false, errors.Errorf("column %q is generated and cannot be set", v.ColumnName)
+		}
+		if seen[v.ColumnName] {
+			return false, errors.Errorf("column %q supplied more than once", v.ColumnName)
+		}
+		seen[v.ColumnName] = true
+
+		columnList = append(columnList, pgx.Identifier{col.Name}.Sanitize())
+		placeholders = append(placeholders, fmt.Sprintf("$%d", len(args)+1))
+		args = append(args, v.Value)
+	}
+
+	safeTable := pgx.Identifier{tableName}.Sanitize()
+	query := fmt.Sprintf("INSERT INTO %s DEFAULT VALUES", safeTable)
+	if len(columnList) > 0 {
+		query = fmt.Sprintf(
+			"INSERT INTO %s (%s) VALUES (%s)",
+			safeTable,
+			strings.Join(columnList, ", "),
+			strings.Join(placeholders, ", "),
+		)
+	}
+
+	tag, err := pool.Exec(context.Background(), query, args...)
+	if err != nil {
+		return false, err
+	}
+
+	return tag.RowsAffected() > 0, nil
 }

@@ -81,6 +81,38 @@ export namespace model {
 	        this.value = source["value"];
 	    }
 	}
+	export class ColumnMeta {
+	    name: string;
+	    dataType: string;
+	    castType: string;
+	    category: string;
+	    isNullable: boolean;
+	    hasDefault: boolean;
+	    defaultValue: string;
+	    isReadOnly: boolean;
+	    isPrimaryKey: boolean;
+	    enumValues: string[];
+	    comment: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ColumnMeta(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.dataType = source["dataType"];
+	        this.castType = source["castType"];
+	        this.category = source["category"];
+	        this.isNullable = source["isNullable"];
+	        this.hasDefault = source["hasDefault"];
+	        this.defaultValue = source["defaultValue"];
+	        this.isReadOnly = source["isReadOnly"];
+	        this.isPrimaryKey = source["isPrimaryKey"];
+	        this.enumValues = source["enumValues"];
+	        this.comment = source["comment"];
+	    }
+	}
 	export class Connection {
 	    ID: number;
 	    Engine: string;
@@ -218,6 +250,20 @@ export namespace model {
 		    }
 		    return a;
 		}
+	}
+	export class InsertValue {
+	    columnName: string;
+	    value?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new InsertValue(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.columnName = source["columnName"];
+	        this.value = source["value"];
+	    }
 	}
 	export class QueryHistory {
 	    id: number;
